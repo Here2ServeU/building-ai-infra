@@ -1,0 +1,25 @@
+# Same ClusterPolicies Flux applies: reuse flux/infrastructure/policy so both
+# GitOps tools enforce one rule set.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kyverno-policies
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: rag-platform
+  source:
+    repoURL: https://github.com/Here2ServeU/building-ai-infra
+    targetRevision: main
+    path: flux/infrastructure/policy
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - SkipDryRunOnMissingResource=true

@@ -4,7 +4,7 @@ metadata:
   name: rag-api
   namespace: flux-system
 spec:
-  image: ghcr.io/nawex/rag-api
+  image: ghcr.io/here2serveu/rag-api
   interval: 5m
 ---
 apiVersion: image.toolkit.fluxcd.io/v1beta2
@@ -28,7 +28,7 @@ metadata:
   name: ingest-worker
   namespace: flux-system
 spec:
-  image: ghcr.io/nawex/ingest-worker
+  image: ghcr.io/here2serveu/ingest-worker
   interval: 5m
 ---
 apiVersion: image.toolkit.fluxcd.io/v1beta2

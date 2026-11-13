@@ -4,11 +4,11 @@ locals {
   location     = "eastus2"
 
   tags = {
-    env          = local.env
-    project      = "rag-platform"
-    owner        = "platform-team"
+    env           = local.env
+    project       = "rag-platform"
+    owner         = "platform-team"
     "cost-center" = "engineering"
-    "managed-by" = "terraform"
+    "managed-by"  = "terraform"
   }
 }
 
@@ -48,6 +48,8 @@ resource "azurerm_log_analytics_workspace" "this" {
 
 module "aks" {
   source                     = "../../modules/aks"
+  gpu_enabled                = var.gpu_enabled
+  spot_enabled               = var.spot_enabled
   cluster_name               = local.cluster_name
   location                   = local.location
   resource_group_name        = azurerm_resource_group.this.name

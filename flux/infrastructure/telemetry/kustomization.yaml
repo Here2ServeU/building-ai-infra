@@ -1,0 +1,7 @@
+# Kept apart from ../observability so Flux variable substitution (CLUSTER_NAME)
+# never touches the {{ $labels }} templates in the Prometheus/SLO rules.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: observability
+resources:
+  - otel-collector.yaml

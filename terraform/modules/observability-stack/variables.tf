@@ -14,8 +14,8 @@ variable "tempo_version" {
 }
 
 variable "grafana_admin_password" {
-  type      = string
-  sensitive = true
+  type        = string
+  sensitive   = true
   description = "Bootstrap Grafana admin password. Should be rotated to OIDC SSO post-bootstrap."
 }
 

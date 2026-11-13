@@ -50,3 +50,20 @@ variable "tags" {
   type    = map(string)
   default = {}
 }
+
+variable "gpu_enabled" {
+  type        = bool
+  description = "Create the GPU node group (min 0, tainted nvidia.com/gpu). Set a budget alert and request GPU quota first."
+  default     = false
+}
+
+variable "gpu_node_instance_types" {
+  type        = list(string)
+  description = "GPU instance types. g5.xlarge = 1x NVIDIA A10G, needs 4 vCPUs of 'Running On-Demand G and VT instances' quota."
+  default     = ["g5.xlarge"]
+}
+
+variable "gpu_node_max" {
+  type    = number
+  default = 2
+}

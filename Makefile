@@ -7,7 +7,30 @@ TF_DIR := terraform/environments/$(ENV)
 
 .PHONY: help
 help: ## Show this help
-	@awk 'BEGIN{FS=":.*##"; printf "\nUsage: make <target>\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@printf "\nNew here? Run: make doctor, then make start, then make ask   (guide: START-HERE.md)\n"
+	@awk 'BEGIN{FS=":.*##"} /^## -+ / {t=$$0; gsub(/^## -+ /,"",t); gsub(/ -+$$/,"",t); printf "\n\033[1m%s\033[0m\n", t} /^[a-zA-Z_-]+:.*?##/ {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo
+
+## ---------- Beginners: start here ----------
+.PHONY: doctor
+doctor: ## Check which tools you have (read-only, installs nothing)
+	@bash scripts/check-prereqs.sh
+
+.PHONY: start
+start: ## Run the demo RAG API on your laptop (no cloud, no Docker). Ctrl+C stops it
+	@echo "Starting the API in stub mode on http://localhost:8080 ..."
+	@echo "In a second terminal, run: make ask"
+	cd apps/rag-api && RAG_STUB=1 go run ./cmd/server
+
+Q ?= What is a GPU node pool that scales to zero?
+export Q
+.PHONY: ask
+ask: ## Ask the running API a question, e.g. make ask Q="what is GitOps?"
+	@bash scripts/ask.sh
+
+.PHONY: pdfs
+pdfs: ## Rebuild the chapter PDFs in docs/series/pdf (needs pandoc and Chrome)
+	@bash scripts/build-pdfs.sh
 
 ## ---------- Terraform ----------
 .PHONY: tf-init
@@ -21,6 +44,10 @@ tf-plan: ## Run terraform plan
 .PHONY: tf-apply
 tf-apply: ## Apply terraform plan
 	terraform -chdir=$(TF_DIR) apply plan.tfplan
+
+.PHONY: tf-destroy
+tf-destroy: ## Destroy the selected ENV (series rule: build, learn, destroy the same day)
+	terraform -chdir=$(TF_DIR) destroy
 
 .PHONY: tf-fmt
 tf-fmt: ## Format all Terraform files
@@ -37,7 +64,7 @@ tf-validate: ## Validate all Terraform configs
 .PHONY: flux-bootstrap
 flux-bootstrap: ## Bootstrap FluxCD against $CLUSTER
 	flux bootstrap git \
-		--url=ssh://git@github.com/nawex/devops-ai-ml-infrastructure \
+		--url=ssh://git@github.com/Here2ServeU/building-ai-infra \
 		--branch=main \
 		--path=flux/clusters/$(CLUSTER) \
 		--components-extra=image-reflector-controller,image-automation-controller
@@ -77,7 +104,7 @@ rag-api-test: ## Run rag-api tests
 	cd apps/rag-api && go test -race -count=1 ./...
 
 .PHONY: rag-api-run
-rag-api-run: ## Run rag-api locally with stub deps
+rag-api-run: ## Run rag-api against real deps (EMBEDDER_ENDPOINT, VECTOR_DB_ADDRESS). For stub mode use make start
 	cd apps/rag-api && go run ./cmd/server
 
 ## ---------- App: ingest-worker (Python) ----------

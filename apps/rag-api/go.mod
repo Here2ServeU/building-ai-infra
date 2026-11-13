@@ -1,4 +1,4 @@
-module github.com/nawex/devops-ai-ml-infrastructure/apps/rag-api
+module github.com/Here2ServeU/building-ai-infra/apps/rag-api
 
 go 1.25.0
 

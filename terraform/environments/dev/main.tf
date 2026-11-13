@@ -4,11 +4,11 @@ locals {
   region       = "us-east-1"
 
   tags = {
-    env          = local.env
-    project      = "rag-platform"
-    owner        = "platform-team"
+    env           = local.env
+    project       = "rag-platform"
+    owner         = "platform-team"
     "cost-center" = "engineering"
-    "managed-by" = "terraform"
+    "managed-by"  = "terraform"
   }
 }
 
@@ -29,6 +29,7 @@ module "vpc" {
 
 module "eks" {
   source             = "../../modules/eks"
+  gpu_enabled        = var.gpu_enabled
   cluster_name       = local.cluster_name
   kubernetes_version = "1.30"
   subnet_ids         = module.vpc.private_subnet_ids
@@ -64,9 +65,9 @@ provider "helm" {
 }
 
 module "observability" {
-  source                  = "../../modules/observability-stack"
-  storage_class           = "gp3"
-  grafana_admin_password  = var.grafana_admin_password
+  source                 = "../../modules/observability-stack"
+  storage_class          = "gp3"
+  grafana_admin_password = var.grafana_admin_password
 
   depends_on = [module.eks]
 }

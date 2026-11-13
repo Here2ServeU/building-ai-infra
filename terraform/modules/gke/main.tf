@@ -53,7 +53,7 @@ resource "google_container_cluster" "this" {
   }
 
   logging_config {
-    enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS", "API_SERVER"]
+    enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS", "APISERVER"]
   }
 
   monitoring_config {
@@ -133,6 +133,63 @@ resource "google_container_node_pool" "apps" {
     service_account = google_service_account.node.email
     oauth_scopes    = ["https://www.googleapis.com/auth/cloud-platform"]
     labels          = { workload = "apps" }
+    workload_metadata_config { mode = "GKE_METADATA" }
+    shielded_instance_config {
+      enable_secure_boot          = true
+      enable_integrity_monitoring = true
+    }
+  }
+
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+}
+
+# -----------------------------------------------------------------------------
+# GPU pool (Building AI Infrastructure, Part 5)
+# Off by default. min 0, tainted so only GPU work lands here. GKE installs the
+# NVIDIA driver at boot (gpu_driver_version = DEFAULT), so the GPU Operator runs
+# with driver.enabled=false. Needs two quotas: "NVIDIA T4 GPUs" (regional) and
+# "GPUs (all regions)".
+# -----------------------------------------------------------------------------
+resource "google_container_node_pool" "gpu" {
+  count = var.gpu_enabled ? 1 : 0
+
+  name     = "gpu"
+  cluster  = google_container_cluster.this.id
+  location = var.region
+
+  node_locations = var.gpu_node_zones
+
+  autoscaling {
+    min_node_count = 0
+    max_node_count = var.gpu_node_max
+  }
+
+  node_config {
+    machine_type    = var.gpu_node_machine_type
+    service_account = google_service_account.node.email
+    oauth_scopes    = ["https://www.googleapis.com/auth/cloud-platform"]
+    labels = {
+      workload                 = "gpu"
+      "nvidia.com/gpu.present" = "true"
+    }
+
+    guest_accelerator {
+      type  = var.gpu_accelerator_type
+      count = 1
+      gpu_driver_installation_config {
+        gpu_driver_version = "DEFAULT"
+      }
+    }
+
+    taint {
+      key    = "nvidia.com/gpu"
+      value  = "present"
+      effect = "NO_SCHEDULE"
+    }
+
     workload_metadata_config { mode = "GKE_METADATA" }
     shielded_instance_config {
       enable_secure_boot          = true

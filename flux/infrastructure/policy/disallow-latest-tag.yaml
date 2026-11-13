@@ -1,0 +1,28 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+  annotations:
+    policies.kyverno.io/title: No images tagged latest
+    policies.kyverno.io/category: Supply Chain
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: require-explicit-tag
+      match:
+        any:
+          - resources: { kinds: [Pod] }
+      validate:
+        message: "Images must use an explicit tag or digest, not ':latest' or no tag."
+        foreach:
+          - list: "request.object.spec.[containers, initContainers][]"
+            deny:
+              conditions:
+                any:
+                  - key: "{{ element.image }}"
+                    operator: Equals
+                    value: "*:latest"
+                  - key: "{{ contains(element.image, ':') || contains(element.image, '@') }}"
+                    operator: Equals
+                    value: false

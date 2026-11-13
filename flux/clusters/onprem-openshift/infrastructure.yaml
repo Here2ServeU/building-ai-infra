@@ -1,0 +1,92 @@
+# Cluster: onprem-openshift. Reconciled from Git (Building AI Infrastructure, Part 7).
+# Order: sources -> controllers (incl. Kyverno, OpenCost) -> policy + observability -> telemetry + gpu.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-sources
+  namespace: flux-system
+spec:
+  interval: 30m
+  retryInterval: 2m
+  path: ./flux/infrastructure/sources
+  prune: true
+  sourceRef: { kind: GitRepository, name: flux-system }
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-controllers
+  namespace: flux-system
+spec:
+  dependsOn: [{ name: infra-sources }]
+  interval: 30m
+  retryInterval: 2m
+  path: ./flux/infrastructure/controllers
+  prune: true
+  sourceRef: { kind: GitRepository, name: flux-system }
+  wait: true
+  postBuild:
+    substitute: { CLUSTER_NAME: onprem-openshift }
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-policy
+  namespace: flux-system
+spec:
+  dependsOn: [{ name: infra-controllers }]
+  interval: 30m
+  retryInterval: 2m
+  path: ./flux/infrastructure/policy
+  prune: true
+  sourceRef: { kind: GitRepository, name: flux-system }
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-observability
+  namespace: flux-system
+spec:
+  dependsOn: [{ name: infra-controllers }]
+  interval: 30m
+  retryInterval: 2m
+  path: ./flux/infrastructure/observability
+  prune: true
+  sourceRef: { kind: GitRepository, name: flux-system }
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-telemetry
+  namespace: flux-system
+spec:
+  dependsOn: [{ name: infra-observability }]
+  interval: 30m
+  retryInterval: 2m
+  path: ./flux/infrastructure/telemetry
+  prune: true
+  sourceRef: { kind: GitRepository, name: flux-system }
+  postBuild:
+    substitute: { CLUSTER_NAME: onprem-openshift }
+---
+# On-prem GPU workers have no cloud image with the driver, so the operator
+# installs it (driver.enabled=true). NFD discovers the hardware first.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-gpu
+  namespace: flux-system
+spec:
+  dependsOn: [{ name: infra-controllers }]
+  interval: 30m
+  retryInterval: 2m
+  path: ./flux/infrastructure/gpu
+  prune: true
+  sourceRef: { kind: GitRepository, name: flux-system }
+  patches:
+    - target: { kind: HelmRelease, name: gpu-operator }
+      patch: |
+        - op: replace
+          path: /spec/values/driver/enabled
+          value: true

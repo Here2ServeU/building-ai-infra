@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nawex/devops-ai-ml-infrastructure/apps/rag-api/internal/retrieval"
+	"github.com/Here2ServeU/building-ai-infra/apps/rag-api/internal/retrieval"
 )
 
 type stubEmbedder struct{}
