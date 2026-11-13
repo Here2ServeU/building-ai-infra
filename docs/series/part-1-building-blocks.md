@@ -6,7 +6,7 @@ part: 1
 
 **In one sentence:** every AI platform, at any company and on any cloud, is made of the same 8 building blocks. Learn them once and you can read any AI platform you'll ever see.
 
-**Video length:** about 14 minutes · **Code:** none, this part is all ideas · **Cost:** $0
+**Video length:** about 14 minutes · **Code:** none, this part is all ideas · **Cost:** $0 · **Watch:** [Part 1 on YouTube](https://youtu.be/a595yoWFIr4)
 
 ## What AI infrastructure is
 
