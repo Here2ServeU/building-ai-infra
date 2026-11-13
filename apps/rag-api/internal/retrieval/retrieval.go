@@ -13,7 +13,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 
-	"github.com/nawex/devops-ai-ml-infrastructure/apps/rag-api/internal/observability"
+	"github.com/Here2ServeU/building-ai-infra/apps/rag-api/internal/observability"
 )
 
 var tracer = otel.Tracer("rag-api/retrieval")
@@ -34,12 +34,12 @@ type VectorStore interface {
 }
 
 type Config struct {
-	VectorDBAddress    string
-	Collection         string
-	EmbedderEndpoint   string
-	EmbedderTimeout    time.Duration
-	TopK               int
-	MaxContextTokens   int
+	VectorDBAddress  string
+	Collection       string
+	EmbedderEndpoint string
+	EmbedderTimeout  time.Duration
+	TopK             int
+	MaxContextTokens int
 }
 
 type Retriever struct {

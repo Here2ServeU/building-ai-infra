@@ -1,2 +1,6 @@
 admin_cidrs            = ["203.0.113.0/24"]
 grafana_admin_password = "REPLACE_ME_FROM_SECRETS_MANAGER"
+
+# Building AI Infrastructure, Part 3: add the GPU node group (min 0).
+# Set a budget alert and request GPU quota first.
+gpu_enabled = false

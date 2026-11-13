@@ -64,8 +64,9 @@ Each environment (`dev`, `staging`, `prod`) maps to one Kubernetes cluster on on
 | `dev-eks` | AWS | `us-east-1` | Engineering iteration |
 | `staging-gke` | GCP | `us-central1` | Pre-prod soak, customer demos |
 | `prod-aks` | Azure | `eastus2` | Production workloads |
+| `onprem-openshift` | Your data center | n/a | Regulated / data-resident workloads (series Part 6) |
 
-Multi-cloud is **not** active/active for the application data plane — it is **portability insurance** plus a way to honor enterprise customer cloud preferences. Each cluster is independently reconcilable from this repo, and the Helm charts and Flux config are cloud-neutral.
+Multi-cloud is **not** active/active for the application data plane. It is **portability insurance** plus a way to honor enterprise customer cloud preferences. The failover pattern is active-passive: see [docs/disaster-recovery.md](docs/disaster-recovery.md). Each cluster is independently reconcilable from this repo, and the Helm charts and Flux config are cloud-neutral.
 
 ## Networking
 
@@ -115,7 +116,7 @@ Golden signals (latency, traffic, errors, saturation) are exposed by every servi
 
 - **Metrics:** Prometheus scrapes via `ServiceMonitor`. Long-term storage via remote-write to Mimir / Cortex (configurable).
 - **Logs:** apps log JSON to stdout; Promtail ships to Loki.
-- **Traces:** OpenTelemetry SDK → OTel Collector → Tempo. The Go API propagates W3C trace context to downstream services and the vector DB client.
+- **Traces:** OpenTelemetry SDK → OTel agent (DaemonSet, every node) → OTel gateway (per cluster, tagged with `k8s.cluster.name`) → Tempo. The gateway also forwards OTLP logs to Loki and metrics to Prometheus ([flux/infrastructure/telemetry](flux/infrastructure/telemetry/)). The Go API propagates W3C trace context to downstream services and the vector DB client.
 
 SLOs are defined as code (Sloth format) under [observability/slo/](observability/slo/) and compiled into multi-window burn-rate alerts.
 
@@ -152,7 +153,7 @@ Qdrant deployed as a StatefulSet with persistent volumes, a PDB, and a per-shard
 - Pod Security Admission `restricted` enforced on all app namespaces.
 - All container images run as non-root, read-only root filesystem.
 - Image scanning (Trivy) and SBOM generation in CI; images are signed with cosign.
-- Admission control: Kyverno policies enforce signed images, required labels, resource limits.
+- Admission control: Kyverno policies in [flux/infrastructure/policy](flux/infrastructure/policy/) cover no root, no `:latest`, resource requests/limits and `team`/`cost-center` labels. They start in `Audit`. Signed-image verification is planned and needs the cosign public key.
 - NetworkPolicies default-deny; explicit allow-list per service.
 - Audit logs shipped from the cluster API server to Loki and an append-only object store for long-term retention.
 
@@ -161,4 +162,6 @@ Qdrant deployed as a StatefulSet with persistent volumes, a PDB, and a per-shard
 - Cluster autoscaler + Karpenter (EKS) / Cluster Autoscaler (GKE/AKS).
 - HPA on all stateless services; KEDA for queue-driven scaling of the ingest worker.
 - Right-sizing: `goldilocks` recommendations reviewed monthly and folded back into Helm values.
-- Cost dashboards in Grafana sourced from cloud billing exports + OpenCost.
+- GPU node pools (opt-in, `gpu_enabled`) start at 0 and are tainted `nvidia.com/gpu`, so only GPU work lands there. The autoscaler grows them on demand and shrinks them back. The NVIDIA GPU Operator (DCGM metrics, device plugin, NFD) is reconciled from [flux/infrastructure/gpu](flux/infrastructure/gpu/).
+- AKS Spot pool (opt-in, `spot_enabled`) for retryable batch and training work.
+- Cost dashboards in Grafana sourced from cloud billing exports + OpenCost (deployed in every cluster). `GPUIdle` and `GPUWeeklyUtilizationLow` alerts flag the biggest waste.

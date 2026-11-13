@@ -1,0 +1,37 @@
+# Building AI Infrastructure, Part 7: one view of cost.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: opencost
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rag-platform
+  source:
+    repoURL: https://opencost.github.io/opencost-helm-chart
+    chart: opencost
+    targetRevision: 1.x
+    helm:
+      values: |
+        opencost:
+          prometheus:
+            internal:
+              enabled: true
+              namespaceName: observability
+              serviceName: kube-prometheus-stack-prometheus
+              port: 9090
+          metrics:
+            serviceMonitor:
+              enabled: true
+          ui:
+            enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: opencost
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: infrastructure-onprem-openshift
+  namespace: argocd
+spec:
+  generators:
+    - git:
+        repoURL: https://github.com/Here2ServeU/building-ai-infra
+        revision: main
+        files:
+          - path: argocd/infrastructure/*.yaml
+  template:
+    metadata:
+      name: '{{path.basename}}-onprem-openshift'
+    spec:
+      project: rag-platform
+      source:
+        repoURL: https://github.com/Here2ServeU/building-ai-infra
+        targetRevision: main
+        path: '{{path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: argocd
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: false

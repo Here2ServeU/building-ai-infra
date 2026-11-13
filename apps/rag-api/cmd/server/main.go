@@ -11,10 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nawex/devops-ai-ml-infrastructure/apps/rag-api/internal/config"
-	"github.com/nawex/devops-ai-ml-infrastructure/apps/rag-api/internal/handler"
-	"github.com/nawex/devops-ai-ml-infrastructure/apps/rag-api/internal/observability"
-	"github.com/nawex/devops-ai-ml-infrastructure/apps/rag-api/internal/retrieval"
+	"github.com/Here2ServeU/building-ai-infra/apps/rag-api/internal/config"
+	"github.com/Here2ServeU/building-ai-infra/apps/rag-api/internal/handler"
+	"github.com/Here2ServeU/building-ai-infra/apps/rag-api/internal/observability"
+	"github.com/Here2ServeU/building-ai-infra/apps/rag-api/internal/retrieval"
 )
 
 func main() {
@@ -39,17 +39,26 @@ func main() {
 		}()
 	}
 
-	retriever, err := retrieval.New(retrieval.Config{
-		VectorDBAddress:    cfg.VectorDBAddress,
-		Collection:         cfg.VectorDBCollection,
-		EmbedderEndpoint:   cfg.EmbedderEndpoint,
-		EmbedderTimeout:    cfg.EmbedderTimeout,
-		TopK:               cfg.RetrievalTopK,
-		MaxContextTokens:   cfg.RetrievalContextTokens,
-	})
-	if err != nil {
-		logger.Error("retrieval init failed", "err", err)
-		os.Exit(1)
+	rcfg := retrieval.Config{
+		VectorDBAddress:  cfg.VectorDBAddress,
+		Collection:       cfg.VectorDBCollection,
+		EmbedderEndpoint: cfg.EmbedderEndpoint,
+		EmbedderTimeout:  cfg.EmbedderTimeout,
+		TopK:             cfg.RetrievalTopK,
+		MaxContextTokens: cfg.RetrievalContextTokens,
+	}
+	var retriever *retrieval.Retriever
+	if cfg.Stub {
+		// RAG_STUB=1: in-memory embedder + notes about the 8 building blocks.
+		// No cluster, embedder or vector DB needed. For learning only.
+		logger.Info("stub mode: using in-memory embedder and vector store")
+		retriever = retrieval.NewStub(rcfg)
+	} else {
+		retriever, err = retrieval.New(rcfg)
+		if err != nil {
+			logger.Error("retrieval init failed", "err", err)
+			os.Exit(1)
+		}
 	}
 
 	apiSrv := &http.Server{

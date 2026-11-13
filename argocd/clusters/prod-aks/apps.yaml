@@ -19,7 +19,7 @@ metadata:
 spec:
   project: rag-platform
   source:
-    repoURL: https://github.com/nawex/nawex-ai-ml-infrastructure
+    repoURL: https://github.com/Here2ServeU/building-ai-infra
     targetRevision: main
     path: helm/charts/vector-db
     helm:
@@ -42,7 +42,7 @@ metadata:
   name: rag-api-prod
   namespace: argocd
   annotations:
-    argocd-image-updater.argoproj.io/image-list: rag-api=ghcr.io/nawex/rag-api
+    argocd-image-updater.argoproj.io/image-list: rag-api=ghcr.io/here2serveu/rag-api
     argocd-image-updater.argoproj.io/rag-api.update-strategy: semver
     argocd-image-updater.argoproj.io/rag-api.allow-tags: regexp:^v[1-9][0-9]*\.[0-9]+\.[0-9]+$
     argocd-image-updater.argoproj.io/write-back-method: git
@@ -51,12 +51,12 @@ metadata:
 spec:
   project: rag-platform
   source:
-    repoURL: https://github.com/nawex/nawex-ai-ml-infrastructure
+    repoURL: https://github.com/Here2ServeU/building-ai-infra
     targetRevision: main
     path: helm/charts/rag-api
     helm:
       values: |
-        image: { repository: ghcr.io/nawex/rag-api, tag: v1.0.0 }
+        image: { repository: ghcr.io/here2serveu/rag-api, tag: v1.0.0 }
         autoscaling: { minReplicas: 10, maxReplicas: 60 }
         pdb: { enabled: true, minAvailable: "60%" }
         resources:
@@ -78,7 +78,7 @@ metadata:
   name: ingest-worker-prod
   namespace: argocd
   annotations:
-    argocd-image-updater.argoproj.io/image-list: ingest-worker=ghcr.io/nawex/ingest-worker
+    argocd-image-updater.argoproj.io/image-list: ingest-worker=ghcr.io/here2serveu/ingest-worker
     argocd-image-updater.argoproj.io/ingest-worker.update-strategy: semver
     argocd-image-updater.argoproj.io/ingest-worker.allow-tags: regexp:^v[1-9][0-9]*\.[0-9]+\.[0-9]+$
     argocd-image-updater.argoproj.io/write-back-method: git
@@ -87,12 +87,12 @@ metadata:
 spec:
   project: rag-platform
   source:
-    repoURL: https://github.com/nawex/nawex-ai-ml-infrastructure
+    repoURL: https://github.com/Here2ServeU/building-ai-infra
     targetRevision: main
     path: helm/charts/ingest-worker
     helm:
       values: |
-        image: { repository: ghcr.io/nawex/ingest-worker, tag: v1.0.0 }
+        image: { repository: ghcr.io/here2serveu/ingest-worker, tag: v1.0.0 }
         keda:
           minReplicaCount: 3
           maxReplicaCount: 100

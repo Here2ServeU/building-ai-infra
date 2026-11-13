@@ -1,0 +1,41 @@
+# Building AI Infrastructure, Parts 6 and 7: idle GPUs are the biggest waste.
+# Metrics come from the NVIDIA GPU Operator's DCGM exporter (flux/infrastructure/gpu).
+# Rules evaluate to nothing on clusters without GPUs, so they are safe everywhere.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: gpu-cost-rules
+  namespace: observability
+  labels:
+    app.kubernetes.io/part-of: rag-platform
+spec:
+  groups:
+    - name: gpu.recording
+      interval: 1m
+      rules:
+        - record: cluster:gpu_utilization:avg
+          expr: avg by (cluster) (DCGM_FI_DEV_GPU_UTIL)
+        - record: node:gpu_utilization:avg5m
+          expr: avg by (cluster, Hostname, gpu) (avg_over_time(DCGM_FI_DEV_GPU_UTIL[5m]))
+
+    - name: gpu.alerts
+      rules:
+        - alert: GPUIdle
+          expr: avg by (cluster, Hostname, gpu) (avg_over_time(DCGM_FI_DEV_GPU_UTIL[30m])) < 5
+          for: 30m
+          labels: { severity: ticket }
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }} idle for an hour"
+            description: >-
+              Under 5% utilization for 60 minutes. In the cloud, check why the GPU
+              pool did not scale back to 0 (leftover pod, PDB, missing taint
+              toleration). On-prem, consider MIG or time-slicing to share it.
+        - alert: GPUWeeklyUtilizationLow
+          expr: avg_over_time(cluster:gpu_utilization:avg[7d]) < 30
+          for: 1h
+          labels: { severity: ticket }
+          annotations:
+            summary: "Cluster {{ $labels.cluster }} GPUs averaged under 30% this week"
+            description: >-
+              Capacity planning signal (Part 6): measure weekly, because buying
+              more GPUs on-prem takes months.

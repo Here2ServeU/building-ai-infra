@@ -17,7 +17,7 @@ variable "private_endpoint" {
 }
 
 variable "master_authorized_cidrs" {
-  type = list(object({ name = string, cidr = string }))
+  type    = list(object({ name = string, cidr = string }))
   default = []
 }
 
@@ -44,4 +44,31 @@ variable "deletion_protection" {
 variable "labels" {
   type    = map(string)
   default = {}
+}
+
+variable "gpu_enabled" {
+  type        = bool
+  description = "Create the GPU node pool (min 0, tainted nvidia.com/gpu, Google-managed driver)."
+  default     = false
+}
+
+variable "gpu_node_machine_type" {
+  type    = string
+  default = "n1-standard-4"
+}
+
+variable "gpu_accelerator_type" {
+  type    = string
+  default = "nvidia-tesla-t4"
+}
+
+variable "gpu_node_zones" {
+  type        = list(string)
+  description = "Zones that offer the accelerator. Empty = all zones in the region (may fail if a zone lacks T4s)."
+  default     = []
+}
+
+variable "gpu_node_max" {
+  type    = number
+  default = 2
 }

@@ -63,3 +63,35 @@ func TestNew_RejectsZeroTopK(t *testing.T) {
 		t.Fatal("expected error for TopK=0")
 	}
 }
+
+func TestStubRetrieverFindsRelevantNote(t *testing.T) {
+	r := NewStub(Config{TopK: 3})
+	docs, err := r.Query(context.Background(), "how does a GPU node pool scale to zero?", 3)
+	if err != nil {
+		t.Fatalf("query: %v", err)
+	}
+	if len(docs) == 0 {
+		t.Fatal("expected at least one document")
+	}
+	if docs[0].ID != "gpu-pool" {
+		t.Fatalf("top result = %q, want gpu-pool", docs[0].ID)
+	}
+}
+
+func TestStubRetrieverAnswersStartHereExamples(t *testing.T) {
+	r := NewStub(Config{TopK: 3})
+	cases := map[string]string{
+		"what is a GPU node pool?":               "gpu-pool",
+		"how do I keep my cloud bill near zero?": "cost",
+		"what is GitOps?":                        "gitops",
+	}
+	for q, want := range cases {
+		docs, err := r.Query(context.Background(), q, 1)
+		if err != nil || len(docs) == 0 {
+			t.Fatalf("%q: err=%v docs=%d", q, err, len(docs))
+		}
+		if docs[0].ID != want {
+			t.Errorf("%q: top result = %q, want %q", q, docs[0].ID, want)
+		}
+	}
+}

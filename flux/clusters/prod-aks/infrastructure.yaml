@@ -1,3 +1,5 @@
+# Cluster: prod-aks. Reconciled from Git (Building AI Infrastructure, Part 7).
+# Order: sources -> controllers (incl. Kyverno, OpenCost) -> policy + observability -> telemetry.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -5,6 +7,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 30m
+  retryInterval: 2m
   path: ./flux/infrastructure/sources
   prune: true
   sourceRef: { kind: GitRepository, name: flux-system }
@@ -18,10 +21,26 @@ metadata:
 spec:
   dependsOn: [{ name: infra-sources }]
   interval: 30m
+  retryInterval: 2m
   path: ./flux/infrastructure/controllers
   prune: true
   sourceRef: { kind: GitRepository, name: flux-system }
   wait: true
+  postBuild:
+    substitute: { CLUSTER_NAME: prod-aks }
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-policy
+  namespace: flux-system
+spec:
+  dependsOn: [{ name: infra-controllers }]
+  interval: 30m
+  retryInterval: 2m
+  path: ./flux/infrastructure/policy
+  prune: true
+  sourceRef: { kind: GitRepository, name: flux-system }
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -31,6 +50,35 @@ metadata:
 spec:
   dependsOn: [{ name: infra-controllers }]
   interval: 30m
+  retryInterval: 2m
   path: ./flux/infrastructure/observability
   prune: true
   sourceRef: { kind: GitRepository, name: flux-system }
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-telemetry
+  namespace: flux-system
+spec:
+  dependsOn: [{ name: infra-observability }]
+  interval: 30m
+  retryInterval: 2m
+  path: ./flux/infrastructure/telemetry
+  prune: true
+  sourceRef: { kind: GitRepository, name: flux-system }
+  postBuild:
+    substitute: { CLUSTER_NAME: prod-aks }
+# ---
+# GPU Operator (opt-in). Uncomment after `terraform apply` with gpu_enabled=true.
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: infra-gpu
+#   namespace: flux-system
+# spec:
+#   dependsOn: [{ name: infra-controllers }]
+#   interval: 30m
+#   path: ./flux/infrastructure/gpu
+#   prune: true
+#   sourceRef: { kind: GitRepository, name: flux-system }

@@ -25,6 +25,7 @@ func (l LogLevel) SlogLevel() slog.Level {
 
 type Config struct {
 	LogLevel               LogLevel
+	Stub                   bool
 	OTLPEndpoint           string
 	VectorDBAddress        string
 	VectorDBCollection     string
@@ -37,6 +38,7 @@ type Config struct {
 func FromEnv() Config {
 	return Config{
 		LogLevel:               LogLevel(getenv("LOG_LEVEL", "info")),
+		Stub:                   getenv("RAG_STUB", "") == "1",
 		OTLPEndpoint:           os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"),
 		VectorDBAddress:        getenv("VECTOR_DB_ADDRESS", "qdrant.qdrant.svc.cluster.local:6334"),
 		VectorDBCollection:     getenv("VECTOR_DB_COLLECTION", "documents"),

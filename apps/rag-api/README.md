@@ -37,6 +37,17 @@ curl -s -XPOST localhost:8080/v1/query -d '{"query":"how do I rotate keys?"}'
 go test -race -count=1 ./...
 ```
 
+## Stub mode (learning and demos)
+
+`RAG_STUB=1` swaps the HTTP embedder and Qdrant for an in-memory bag-of-words embedder and a small built-in set of notes on the course's 8 building blocks (`internal/retrieval/stub.go`). Nothing else is needed:
+
+```bash
+make start                                  # from the repo root
+make ask Q="what is a GPU node pool?"       # in a second terminal
+```
+
+It isn't a real embedding model. It exists so a beginner can see the request → retrieve → answer flow in under a minute.
+
 ## Production wiring
 
 - The Qdrant client in `internal/retrieval/qdrant.go` is intentionally a stub so this module vendors cleanly without grpc/qdrant deps. To wire production, depend on `github.com/qdrant/go-client` and replace `Search` with the gRPC call. Tests use `retrieval.NewWithDeps` to inject fakes and don't depend on the real client.
@@ -46,7 +57,7 @@ go test -race -count=1 ./...
 ## Image
 
 ```bash
-docker build -t ghcr.io/nawex/rag-api:dev .
+docker build -t ghcr.io/here2serveu/rag-api:dev .
 ```
 
 The image is distroless static, runs as UID 65532, exposes 8080 (HTTP) and 9090 (metrics).

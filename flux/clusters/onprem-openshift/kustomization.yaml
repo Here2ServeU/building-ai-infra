@@ -1,0 +1,13 @@
+# On-prem cluster (Building AI Infrastructure, Parts 6 and 7).
+# "Adding the on-prem cluster is just another folder."
+# Bootstrap: make flux-bootstrap CLUSTER=onprem-openshift (against your `oc login` context).
+# Prereqs not managed here: OpenShift install, ODF/Ceph storage, MetalLB, and the
+# observability stack (Terraform installs it on the clouds; install the same charts on-prem).
+# Air-gapped: mirror the Helm repos in flux/infrastructure/sources and all images
+# to your internal registry first, then point the HelmRepository URLs at the mirror.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - flux-system
+  - infrastructure.yaml
+  - apps.yaml

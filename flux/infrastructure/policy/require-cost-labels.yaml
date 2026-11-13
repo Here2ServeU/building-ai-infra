@@ -1,0 +1,29 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-cost-labels
+  annotations:
+    policies.kyverno.io/title: Every workload has an owner
+    policies.kyverno.io/category: Cost
+    policies.kyverno.io/description: >-
+      Part 7 "One view of cost": label every workload with its team and cost
+      center so OpenCost can attribute every dollar.
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: require-team-and-cost-center
+      match:
+        any:
+          - resources: { kinds: [Deployment, StatefulSet, Job, CronJob] }
+      exclude:
+        any:
+          - resources:
+              namespaces: [kube-system, kyverno, flux-system, argocd, observability, opencost, gpu-operator]
+      validate:
+        message: "Workloads need metadata.labels 'team' and 'cost-center'."
+        pattern:
+          metadata:
+            labels:
+              team: "?*"
+              cost-center: "?*"

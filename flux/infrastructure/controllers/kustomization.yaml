@@ -5,3 +5,5 @@ resources:
   - ingress-nginx.yaml
   - external-secrets.yaml
   - keda.yaml
+  - kyverno.yaml
+  - opencost.yaml

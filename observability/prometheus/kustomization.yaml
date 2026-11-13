@@ -3,3 +3,4 @@ kind: Kustomization
 namespace: observability
 resources:
   - platform-rules.yaml
+  - gpu-cost-rules.yaml

@@ -1,0 +1,38 @@
+# Building AI Infrastructure, Part 7: one view of cost.
+# Spend per namespace/team label in every cluster. Combine with each cloud's
+# billing export (and amortized hardware cost on-prem) for the fleet report.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: opencost
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: opencost
+  namespace: opencost
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: opencost
+      version: "1.x"
+      sourceRef:
+        kind: HelmRepository
+        name: opencost
+        namespace: flux-system
+  values:
+    opencost:
+      exporter:
+        defaultClusterId: ${CLUSTER_NAME:=unknown}
+      prometheus:
+        internal:
+          enabled: true
+          namespaceName: observability
+          serviceName: kube-prometheus-stack-prometheus
+          port: 9090
+      metrics:
+        serviceMonitor:
+          enabled: true
+      ui:
+        enabled: true

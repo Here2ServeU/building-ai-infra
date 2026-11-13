@@ -24,22 +24,22 @@ resource "helm_release" "kube_prometheus_stack" {
 
   values = [yamlencode({
     grafana = {
-      adminPassword = var.grafana_admin_password
+      adminPassword            = var.grafana_admin_password
       defaultDashboardsEnabled = true
       sidecar = {
-        dashboards = { enabled = true, searchNamespace = "ALL", label = "grafana_dashboard" }
+        dashboards  = { enabled = true, searchNamespace = "ALL", label = "grafana_dashboard" }
         datasources = { enabled = true }
       }
     }
     prometheus = {
       prometheusSpec = {
-        retention                                = "15d"
-        retentionSize                            = "45GB"
-        ruleSelectorNilUsesHelmValues            = false
-        serviceMonitorSelectorNilUsesHelmValues  = false
-        podMonitorSelectorNilUsesHelmValues      = false
-        scrapeInterval                           = "30s"
-        evaluationInterval                       = "30s"
+        retention                               = "15d"
+        retentionSize                           = "45GB"
+        ruleSelectorNilUsesHelmValues           = false
+        serviceMonitorSelectorNilUsesHelmValues = false
+        podMonitorSelectorNilUsesHelmValues     = false
+        scrapeInterval                          = "30s"
+        evaluationInterval                      = "30s"
         storageSpec = {
           volumeClaimTemplate = {
             spec = {
@@ -83,7 +83,7 @@ resource "helm_release" "loki" {
     loki = {
       auth_enabled = false
       commonConfig = { replication_factor = 1 }
-      storage = { type = "filesystem" }
+      storage      = { type = "filesystem" }
       schemaConfig = {
         configs = [{
           from         = "2024-01-01"

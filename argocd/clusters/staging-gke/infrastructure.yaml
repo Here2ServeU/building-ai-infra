@@ -6,7 +6,7 @@ metadata:
 spec:
   generators:
     - git:
-        repoURL: https://github.com/nawex/nawex-ai-ml-infrastructure
+        repoURL: https://github.com/Here2ServeU/building-ai-infra
         revision: main
         files:
           - path: argocd/infrastructure/*.yaml
@@ -16,7 +16,7 @@ spec:
     spec:
       project: rag-platform
       source:
-        repoURL: https://github.com/nawex/nawex-ai-ml-infrastructure
+        repoURL: https://github.com/Here2ServeU/building-ai-infra
         targetRevision: main
         path: '{{path}}'
       destination:

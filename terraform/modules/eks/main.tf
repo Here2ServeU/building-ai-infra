@@ -151,3 +151,54 @@ resource "aws_eks_node_group" "apps" {
 
   tags = merge(var.tags, { "k8s.io/cluster-autoscaler/enabled" = "true" })
 }
+
+# -----------------------------------------------------------------------------
+# GPU node group (Building AI Infrastructure, Part 3)
+# Off by default. Starts at 0 nodes; the cluster autoscaler adds a node only
+# when a pod requests nvidia.com/gpu, and removes it after the scale-down delay.
+# The taint keeps non-GPU work off these (expensive) nodes.
+# The EKS NVIDIA AMI ships the driver, so the GPU Operator runs with
+# driver.enabled=false (see flux/infrastructure/gpu/).
+# -----------------------------------------------------------------------------
+resource "aws_eks_node_group" "gpu" {
+  count = var.gpu_enabled ? 1 : 0
+
+  cluster_name    = aws_eks_cluster.this.name
+  node_group_name = "gpu"
+  node_role_arn   = aws_iam_role.node.arn
+  subnet_ids      = var.subnet_ids
+  ami_type        = "AL2023_x86_64_NVIDIA"
+  instance_types  = var.gpu_node_instance_types
+
+  scaling_config {
+    desired_size = 0
+    min_size     = 0
+    max_size     = var.gpu_node_max
+  }
+
+  update_config { max_unavailable = 1 }
+
+  labels = {
+    workload                 = "gpu"
+    "nvidia.com/gpu.present" = "true"
+  }
+
+  taint {
+    key    = "nvidia.com/gpu"
+    value  = "present"
+    effect = "NO_SCHEDULE"
+  }
+
+  # Cluster autoscaler >= 1.24 reads managed node group labels/taints from the
+  # EKS API to scale from zero; these tags are the fallback hint.
+  tags = merge(var.tags, {
+    "k8s.io/cluster-autoscaler/enabled"                                = "true"
+    "k8s.io/cluster-autoscaler/node-template/label/workload"           = "gpu"
+    "k8s.io/cluster-autoscaler/node-template/taint/nvidia.com/gpu"     = "present:NoSchedule"
+    "k8s.io/cluster-autoscaler/node-template/resources/nvidia.com/gpu" = "1"
+  })
+
+  lifecycle {
+    ignore_changes = [scaling_config[0].desired_size]
+  }
+}

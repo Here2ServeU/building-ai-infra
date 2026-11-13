@@ -57,6 +57,7 @@ resource "google_compute_router_nat" "nat" {
 
 module "gke" {
   source              = "../../modules/gke"
+  gpu_enabled         = var.gpu_enabled
   project_id          = var.project_id
   cluster_name        = local.cluster_name
   region              = local.region
@@ -69,10 +70,10 @@ module "gke" {
     for c in var.admin_cidrs : { name = "admin", cidr = c }
   ]
 
-  app_node_min          = 2
-  app_node_max          = 10
-  deletion_protection   = false # staging only
-  labels                = local.labels
+  app_node_min        = 2
+  app_node_max        = 10
+  deletion_protection = false # staging only
+  labels              = local.labels
 }
 
 data "google_client_config" "default" {}

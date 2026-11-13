@@ -29,7 +29,7 @@ metadata:
 spec:
   project: rag-platform
   source:
-    repoURL: https://github.com/nawex/nawex-ai-ml-infrastructure
+    repoURL: https://github.com/Here2ServeU/building-ai-infra
     targetRevision: main
     path: helm/charts/vector-db
     helm:
@@ -51,7 +51,7 @@ metadata:
   name: rag-api
   namespace: argocd
   annotations:
-    argocd-image-updater.argoproj.io/image-list: rag-api=ghcr.io/nawex/rag-api
+    argocd-image-updater.argoproj.io/image-list: rag-api=ghcr.io/here2serveu/rag-api
     argocd-image-updater.argoproj.io/rag-api.update-strategy: semver
     argocd-image-updater.argoproj.io/rag-api.allow-tags: regexp:^v0\..*$
     argocd-image-updater.argoproj.io/write-back-method: git
@@ -61,13 +61,13 @@ metadata:
 spec:
   project: rag-platform
   source:
-    repoURL: https://github.com/nawex/nawex-ai-ml-infrastructure
+    repoURL: https://github.com/Here2ServeU/building-ai-infra
     targetRevision: main
     path: helm/charts/rag-api
     helm:
       values: |
         image:
-          repository: ghcr.io/nawex/rag-api
+          repository: ghcr.io/here2serveu/rag-api
           tag: v0.1.0
         ingress:
           hosts:
@@ -89,7 +89,7 @@ metadata:
   name: ingest-worker
   namespace: argocd
   annotations:
-    argocd-image-updater.argoproj.io/image-list: ingest-worker=ghcr.io/nawex/ingest-worker
+    argocd-image-updater.argoproj.io/image-list: ingest-worker=ghcr.io/here2serveu/ingest-worker
     argocd-image-updater.argoproj.io/ingest-worker.update-strategy: semver
     argocd-image-updater.argoproj.io/ingest-worker.allow-tags: regexp:^v0\..*$
     argocd-image-updater.argoproj.io/write-back-method: git
@@ -99,13 +99,13 @@ metadata:
 spec:
   project: rag-platform
   source:
-    repoURL: https://github.com/nawex/nawex-ai-ml-infrastructure
+    repoURL: https://github.com/Here2ServeU/building-ai-infra
     targetRevision: main
     path: helm/charts/ingest-worker
     helm:
       values: |
         image:
-          repository: ghcr.io/nawex/ingest-worker
+          repository: ghcr.io/here2serveu/ingest-worker
           tag: v0.1.0
   destination:
     server: https://kubernetes.default.svc

@@ -1,0 +1,9 @@
+# Building AI Infrastructure, Parts 3-6: NVIDIA GPU Operator.
+# Opt-in: a cluster adds the infra-gpu Kustomization (see its infrastructure.yaml)
+# only after its GPU pool exists (Terraform gpu_enabled=true, or on-prem GPU workers).
+# Cloud default: driver.enabled=false (EKS NVIDIA AMI, AKS and GKE ship the driver).
+# On-prem patches driver.enabled=true (see flux/clusters/onprem-openshift).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - gpu-operator.yaml

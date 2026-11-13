@@ -1,0 +1,102 @@
+# Building AI Infrastructure, Part 7: one observability pipeline.
+# Agent (DaemonSet) on every node -> gateway (Deployment) per cluster ->
+# Tempo (traces), Loki (logs) and Prometheus (metrics). Apps instrument once
+# and send OTLP to the local agent; every cluster reports the same way.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: otel-gateway
+  namespace: observability
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: opentelemetry-collector
+      version: "0.x"
+      sourceRef:
+        kind: HelmRepository
+        name: open-telemetry
+        namespace: flux-system
+  values:
+    mode: deployment
+    replicaCount: 2
+    image:
+      repository: otel/opentelemetry-collector-contrib
+    config:
+      processors:
+        batch: {}
+        resource:
+          attributes:
+            - key: k8s.cluster.name
+              value: ${CLUSTER_NAME:=unknown}
+              action: upsert
+      exporters:
+        otlp/tempo:
+          endpoint: tempo.observability.svc:4317
+          tls: { insecure: true }
+        otlphttp/loki:
+          endpoint: http://loki-gateway.observability.svc/otlp
+        prometheusremotewrite:
+          endpoint: http://kube-prometheus-stack-prometheus.observability.svc:9090/api/v1/write
+      service:
+        pipelines:
+          traces:
+            receivers: [otlp]
+            processors: [resource, batch]
+            exporters: [otlp/tempo]
+          logs:
+            receivers: [otlp]
+            processors: [resource, batch]
+            exporters: [otlphttp/loki]
+          metrics:
+            receivers: [otlp]
+            processors: [resource, batch]
+            exporters: [prometheusremotewrite]
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: otel-agent
+  namespace: observability
+spec:
+  interval: 1h
+  dependsOn:
+    - name: otel-gateway
+  chart:
+    spec:
+      chart: opentelemetry-collector
+      version: "0.x"
+      sourceRef:
+        kind: HelmRepository
+        name: open-telemetry
+        namespace: flux-system
+  values:
+    mode: daemonset
+    image:
+      repository: otel/opentelemetry-collector-contrib
+    presets:
+      kubernetesAttributes:
+        enabled: true
+    tolerations:
+      - operator: Exists # run on every node, including tainted GPU / system / spot nodes
+    config:
+      processors:
+        batch: {}
+      exporters:
+        otlp/gateway:
+          endpoint: otel-gateway-opentelemetry-collector.observability.svc:4317
+          tls: { insecure: true }
+      service:
+        pipelines:
+          traces:
+            receivers: [otlp]
+            processors: [k8sattributes, batch]
+            exporters: [otlp/gateway]
+          logs:
+            receivers: [otlp]
+            processors: [k8sattributes, batch]
+            exporters: [otlp/gateway]
+          metrics:
+            receivers: [otlp]
+            processors: [k8sattributes, batch]
+            exporters: [otlp/gateway]
