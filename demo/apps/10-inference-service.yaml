@@ -1,0 +1,120 @@
+# The model served by KServe (RawDeployment mode, no Knative needed).
+# The predictor is a tiny mock model server. Emits the same metrics the real KServe
+# transformer/predictor would emit (inference_requests_total, inference_request_duration_seconds_bucket,
+# model_prediction_confidence_*, model_ood_detections_total) so the model-serving-RED
+# dashboard and SLO rules light up.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: doc-classifier-code
+  namespace: mlops
+data:
+  app.py: |
+    import os, time, random
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    from prometheus_client import Counter, Histogram, Summary, generate_latest, CONTENT_TYPE_LATEST
+
+    REQS = Counter("inference_requests_total", "Inference requests", ["model_name", "code"])
+    DUR = Histogram("inference_request_duration_seconds", "Inference latency", ["model_name"],
+                    buckets=[0.005,0.01,0.025,0.05,0.1,0.25,0.5,1,2.5,5])
+    CONF = Summary("model_prediction_confidence", "Confidence score", ["model_name"])
+    OOD = Counter("model_ood_detections_total", "OOD count", ["model_name"])
+
+    MODEL = os.environ.get("MODEL_NAME", "doc-classifier")
+    MODEL_VERSION = os.environ.get("MODEL_VERSION", "v1")
+    BASE_LATENCY = float(os.environ.get("BASE_LATENCY", "0.04"))
+
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a, **kw): pass
+        def do_GET(self):
+            if self.path == "/metrics":
+                self.send_response(200); self.send_header("Content-Type", CONTENT_TYPE_LATEST); self.end_headers()
+                self.wfile.write(generate_latest()); return
+            if self.path == "/healthz":
+                self.send_response(200); self.end_headers(); self.wfile.write(b"ok"); return
+            if self.path == "/v1/models/doc-classifier":
+                self.send_response(200); self.end_headers()
+                self.wfile.write(f'{{"name":"{MODEL}","version":"{MODEL_VERSION}","ready":true}}'.encode())
+                return
+            self.send_response(404); self.end_headers()
+        def do_POST(self):
+            t0 = time.time()
+            time.sleep(BASE_LATENCY + random.uniform(0, 0.03))
+            confidence = max(0.5, min(1.0, random.gauss(0.85, 0.07)))
+            CONF.labels(MODEL).observe(confidence)
+            if confidence < 0.6:
+                OOD.labels(MODEL).inc()
+            REQS.labels(MODEL, "200").inc()
+            DUR.labels(MODEL).observe(time.time() - t0)
+            self.send_response(200); self.end_headers()
+            self.wfile.write(f'{{"prediction":"class_A","confidence":{confidence:.3f},"version":"{MODEL_VERSION}"}}'.encode())
+
+    if __name__ == "__main__":
+        HTTPServer(("0.0.0.0", 8080), H).serve_forever()
+---
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: doc-classifier
+  namespace: mlops
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment
+  labels:
+    app.kubernetes.io/name: doc-classifier
+    model.regulated: "true"
+spec:
+  predictor:
+    minReplicas: 2
+    maxReplicas: 2
+    containers:
+      - name: kserve-container
+        image: python:3.12-slim
+        command: ["sh", "-c"]
+        args:
+          - "pip install --quiet prometheus_client && python /code/app.py"
+        env:
+          - name: MODEL_NAME
+            value: doc-classifier
+          - name: MODEL_VERSION
+            value: v2
+          - name: OTEL_EXPORTER_OTLP_ENDPOINT
+            value: http://otel-collector-gateway-opentelemetry-collector.observability.svc:4317
+          - name: OTEL_SERVICE_NAME
+            value: doc-classifier
+          - name: OTEL_RESOURCE_ATTRIBUTES
+            value: ml.model=doc-classifier,ml.stage=Production,deployment.environment=demo,compliance.regulated=true
+        ports:
+          - name: http1
+            containerPort: 8080
+            protocol: TCP
+        readinessProbe:
+          httpGet: { path: /healthz, port: 8080 }
+          initialDelaySeconds: 5
+        resources:
+          requests: { cpu: 100m, memory: 128Mi }
+          limits: { cpu: 500m, memory: 512Mi }
+        volumeMounts:
+          - name: code
+            mountPath: /code
+    volumes:
+      - name: code
+        configMap:
+          name: doc-classifier-code
+---
+# KServe labels every predictor pod with serving.kserve.io/inferenceservice.
+# Metrics are served on the same port as predictions (/metrics).
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: doc-classifier
+  namespace: mlops
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      serving.kserve.io/inferenceservice: doc-classifier
+  podMetricsEndpoints:
+    - port: http1
+      path: /metrics
+      interval: 15s
