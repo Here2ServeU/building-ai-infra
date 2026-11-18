@@ -6,7 +6,7 @@ part: 2
 
 **In one sentence:** run all 8 building blocks on your own laptop, for free, with the same tools you'll later use in every cloud.
 
-**Video length:** about 10 minutes · **Code:** [nawex-observability-case-study](https://github.com/Here2ServeU/nawex-observability-case-study) (folder `demo/`) · **Cost:** $0
+**Video length:** about 10 minutes · **Code:** [building-ai-infra](https://github.com/Here2ServeU/building-ai-infra), folder [`demo/`](../../demo) · **Cost:** $0
 
 ## Why start on a laptop
 
@@ -28,15 +28,32 @@ The cloud charges you while you learn. On a laptop you can break things, rebuild
 ## What you need
 
 - Docker Desktop with **at least 6 CPUs and 10 GB of memory** (Docker settings → Resources).
-- Tools: kind, kubectl, helm, jq, curl, git, docker compose v2. Run `make doctor` in this repo to check.
+- Tools: kind, kubectl, helm, jq, curl, git, docker compose v2.
+- Code: [github.com/Here2ServeU/building-ai-infra](https://github.com/Here2ServeU/building-ai-infra). Everything runs from `demo/`.
+
+Check: `kind version && kubectl version --client && helm version && docker compose version`. If all four print a version, you're ready.
 
 ## Build it: one command
 
 ```bash
-git clone https://github.com/Here2ServeU/nawex-observability-case-study
-cd nawex-observability-case-study/demo
-make up      # about 5 minutes the first time; watch each block report "ready"
+git clone https://github.com/Here2ServeU/building-ai-infra
+cd building-ai-infra/demo
+make up      # about 5 minutes the first time
 make demo    # opens Grafana, Alertmanager, Prometheus and MLflow
+```
+
+Watch the checklist. Each block reports ready:
+
+```text
+✓ kind cluster ready
+✓ minio + postgres ready
+✓ loki ready
+✓ kube-prometheus-stack ready
+✓ otel gateway + agent ready
+✓ mlflow ready
+✓ kserve ready
+✓ sample-app + load-generator
+✓ inference service ready
 ```
 
 If something fails, the most common cause is not enough memory for Docker. Raise it and run `make up` again.
@@ -55,7 +72,7 @@ If something fails, the most common cause is not enough memory for Docker. Raise
 
 > You should only trust an alert you've actually watched fire.
 
-**Data drift (unique to AI).** Run `make scenario-drift`. The incoming data stops looking like the training data, and the model quietly gets worse while nothing crashes. The **PSI** (population stability index) score rises, and the drift alert fires in about 3 minutes. Respond by retraining, or roll back with `make scenario-rollback`.
+**Data drift (unique to AI).** Run `make scenario-drift`. The incoming data stops looking like the training data, and the model quietly gets worse while nothing crashes. The **PSI** (population stability index) score rises, and the drift alert fires in about 3 minutes. Respond by retraining, or roll back: `make scenario-rollback` moves the inference service back one version.
 
 ## Laptop vs. the real thing
 

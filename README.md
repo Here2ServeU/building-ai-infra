@@ -80,6 +80,10 @@ The cluster comes up with the platform stack (cert-manager, ingress-nginx, kube-
 ## Local development
 
 ```bash
+# Part 2: all 8 building blocks on kind (needs Docker with 6 CPUs / 10 GB)
+cd demo && make up && make demo    # make down when you're done
+cd ..
+
 # Run the RAG API locally in stub mode (no cluster, embedder or vector DB needed)
 make start
 make ask Q="what is GitOps?"     # in a second terminal

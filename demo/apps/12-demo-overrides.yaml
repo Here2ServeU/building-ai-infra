@@ -1,0 +1,38 @@
+# Demo-only fast variants of the production drift alerts.
+# Production uses for: 30m / 1h (real-world: don't page on flaky drift).
+# Locally we want alerts to fire in a demo timeline (~1 min after metrics shift).
+# These rules are NAMED with "Fast" suffix so the production rules also remain visible
+# alongside in `kubectl get prometheusrules`, making the override explicit during demo.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: aiops-mlops-demo-fast
+  namespace: observability
+  labels:
+    release: kube-prometheus-stack
+    role: alert-rules
+    demo-override: "true"
+spec:
+  groups:
+    - name: drift-fast-demo
+      interval: 15s
+      rules:
+        - alert: FeatureDriftWarningFast
+          expr: max by (model_name, feature_name) (model_feature_psi) > 0.2
+          for: 1m
+          labels:
+            severity: warning
+            component: aiops
+            demo: "true"
+          annotations:
+            summary: "[demo] Feature drift PSI > 0.2 on {{ $labels.model_name }} / {{ $labels.feature_name }}"
+
+        - alert: FeatureDriftCriticalFast
+          expr: max by (model_name, feature_name) (model_feature_psi) > 0.25
+          for: 1m
+          labels:
+            severity: critical
+            component: aiops
+            demo: "true"
+          annotations:
+            summary: "[demo] Severe feature drift on {{ $labels.model_name }} / {{ $labels.feature_name }} — schedule retrain"
