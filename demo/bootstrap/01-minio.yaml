@@ -35,9 +35,13 @@ spec:
       labels:
         app: minio
     spec:
+      securityContext:
+        fsGroup: 65532
       containers:
         - name: minio
-          image: minio/minio:RELEASE.2025-01-20T14-49-07Z
+          # MinIO removed its free images from Docker Hub and quay.io in 2025-2026.
+          # Chainguard publishes a free, maintained build of the same server.
+          image: cgr.dev/chainguard/minio:latest
           args: ["server", "/data", "--console-address", ":9001"]
           env:
             - name: MINIO_ROOT_USER

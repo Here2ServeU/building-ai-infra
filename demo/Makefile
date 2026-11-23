@@ -101,6 +101,9 @@ kubeconfig:
 bootstrap:
 	@printf "$(Y)→ starting MinIO + Postgres (first run downloads images, 2-5 min)...$(N)\n"
 	@kubectl apply -f bootstrap/ >/dev/null
+	@# A StatefulSet pod stuck on an old, unpullable image is not replaced on its own.
+	@if kubectl -n storage get pod minio-0 -o jsonpath='{.status.containerStatuses[0].state.waiting.reason}' 2>/dev/null \
+		| grep -qE 'ImagePullBackOff|ErrImagePull'; then kubectl -n storage delete pod minio-0 --wait=false >/dev/null; fi
 	@kubectl -n storage rollout status statefulset/minio --timeout=300s >/dev/null
 	@kubectl -n storage rollout status statefulset/postgres --timeout=300s >/dev/null
 	@./scripts/init-minio.sh >/dev/null
