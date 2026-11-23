@@ -39,7 +39,42 @@ make up      # about 10 minutes the first time; watch each block report "ready"
 make demo    # opens Grafana, Alertmanager, Prometheus and MLflow
 ```
 
-If something fails, the most common cause is not enough memory for Docker. Raise it and run `make up` again.
+### What you'll see
+
+Each block prints a yellow `→` line when it starts and a green `✓` line when it's ready:
+
+```text
+→ creating the kind cluster (3 nodes)...
+✓ kind cluster ready
+→ starting MinIO + Postgres (first run downloads images, 2-5 min)...
+✓ minio + postgres ready
+✓ loki ready
+✓ kube-prometheus-stack ready        # the longest step, 3-8 min
+✓ otel gateway + agent ready
+✓ mlflow ready
+✓ kserve ready
+✓ sample-app + load-generator
+✓ inference service ready
+Platform is up. Next: make demo
+```
+
+**It looks stuck?** It's usually downloading images. Leave it running. In a second terminal, `kubectl get pods -A` shows what's starting. Only act if it stops with a red `✗` or an error.
+
+**Wait for `✓ inference service ready` before `make demo`.** If the cluster isn't up yet, `make demo` tells you so instead of opening broken pages.
+
+`make up` is safe to run again. It reuses the cluster and picks up where it stopped.
+
+### If something fails
+
+| You see | What it means | Fix |
+|---|---|---|
+| `ports ... already in use ... used by container <name>-control-plane` | Another kind cluster is using the same ports | Pause it: `docker stop $(docker ps -q --filter label=io.x-k8s.kind.cluster=<name>)`. Or, if you don't need it, delete it: `kind delete cluster --name <name>`. Then `make up` again. |
+| `port ... used by process ...` | Another app (a dev server, AirPlay on macOS) has the port | Stop that app, then `make up` again |
+| A step times out, or pods stay `Pending` | Docker doesn't have enough memory or CPU | Docker settings → Resources: 10 GB / 6 CPUs, then `make up` again |
+| `Docker is not running` | Docker Desktop is closed | Start it, wait for the whale icon to settle, then `make up` |
+| `kubectl` talks to the wrong cluster | Another tool changed your kubeconfig | `make kubeconfig` |
+
+To bring a paused cluster back later: `make down`, then `docker start $(docker ps -aq --filter label=io.x-k8s.kind.cluster=<name>)`.
 
 ## Tour: one stop per block
 

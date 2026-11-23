@@ -91,6 +91,8 @@ make down    # deletes the cluster; your laptop is back to normal
 | Symptom | Fix |
 |---|---|
 | A step times out or pods sit in `Pending` | Docker needs more memory/CPU. Raise to 10 GB / 6 CPU, then `make up` again. |
+| `ports ... already in use ... used by container <name>-control-plane` | Another kind cluster has the ports. Pause it: `docker stop $(docker ps -q --filter label=io.x-k8s.kind.cluster=<name>)`, or delete it: `kind delete cluster --name <name>`. |
+| It seems stuck after a `→` line | It is downloading images. Leave it; `kubectl get pods -A` in another terminal shows progress. |
 | `address already in use` on 3000, 5001, 9000, 9001, 9090, 9093, 4317 or 4318 | Find it with `lsof -nP -iTCP:<port> -sTCP:LISTEN`, stop it, or change `hostPort` in `kind/cluster.yaml`, then `make down && make up`. |
 | `kubectl` talks to `localhost:8080` or the wrong cluster | `make kubeconfig` |
 | Linux: OTel agent or other pods show `too many open files` | `sudo sysctl fs.inotify.max_user_watches=524288 fs.inotify.max_user_instances=512` |

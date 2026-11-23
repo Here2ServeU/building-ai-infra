@@ -79,6 +79,7 @@ preflight:
 
 .PHONY: cluster
 cluster:
+	@printf "$(Y)→ creating the kind cluster (3 nodes)...$(N)\n"
 	@if kind get clusters 2>/dev/null | grep -qx "$(CLUSTER_NAME)"; then \
 		echo "  cluster $(CLUSTER_NAME) already exists, reusing"; \
 	else \
@@ -98,6 +99,7 @@ kubeconfig:
 
 .PHONY: bootstrap
 bootstrap:
+	@printf "$(Y)→ starting MinIO + Postgres (first run downloads images, 2-5 min)...$(N)\n"
 	@kubectl apply -f bootstrap/ >/dev/null
 	@kubectl -n storage rollout status statefulset/minio --timeout=300s >/dev/null
 	@kubectl -n storage rollout status statefulset/postgres --timeout=300s >/dev/null
@@ -114,6 +116,7 @@ helm-repos:
 
 .PHONY: loki
 loki:
+	@printf "$(Y)→ installing Loki (logs)...$(N)\n"
 	@helm upgrade --install loki grafana/loki $(call ver,$(LOKI_VERSION)) \
 		--namespace observability --values values/loki.yaml --timeout 10m >/dev/null
 	@kubectl -n observability rollout status statefulset/loki --timeout=10m >/dev/null
@@ -121,6 +124,7 @@ loki:
 
 .PHONY: prometheus-stack
 prometheus-stack:
+	@printf "$(Y)→ installing Prometheus, Grafana, Alertmanager (largest step, 3-8 min)...$(N)\n"
 	@helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack $(call ver,$(KPS_VERSION)) \
 		--namespace observability --values values/kube-prometheus-stack.yaml --wait --timeout 15m >/dev/null
 	@kubectl apply -f rules/ >/dev/null
@@ -128,6 +132,7 @@ prometheus-stack:
 
 .PHONY: otel
 otel:
+	@printf "$(Y)→ installing OpenTelemetry gateway + agent (~300 MB image)...$(N)\n"
 	@helm upgrade --install otel-collector-gateway open-telemetry/opentelemetry-collector $(call ver,$(OTEL_VERSION)) \
 		--namespace observability --values values/otel-gateway.yaml --timeout 10m >/dev/null
 	@helm upgrade --install otel-agent open-telemetry/opentelemetry-collector $(call ver,$(OTEL_VERSION)) \
@@ -138,6 +143,7 @@ otel:
 
 .PHONY: mlflow
 mlflow:
+	@printf "$(Y)→ installing MLflow...$(N)\n"
 	@helm upgrade --install mlflow community-charts/mlflow $(call ver,$(MLFLOW_VERSION)) \
 		--namespace mlops --values values/mlflow.yaml --timeout 10m >/dev/null
 	@# Pin the NodePort so http://localhost:5001 always works, whatever the chart defaults to.
@@ -150,6 +156,7 @@ mlflow:
 # RawDeployment mode (plain Deployments + Services) so Knative and Istio are not needed.
 .PHONY: kserve
 kserve: cert-manager
+	@printf "$(Y)→ installing KServe (RawDeployment mode)...$(N)\n"
 	@for i in $$(seq 1 20); do \
 		kubectl apply --server-side --force-conflicts \
 			-f https://github.com/kserve/kserve/releases/download/$(KSERVE_VERSION)/kserve.yaml >/dev/null 2>&1 && break; \
@@ -165,11 +172,13 @@ kserve: cert-manager
 
 .PHONY: cert-manager
 cert-manager:
+	@printf "$(Y)→ installing cert-manager (needed by KServe)...$(N)\n"
 	@kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml >/dev/null
 	@kubectl -n cert-manager wait --for=condition=Available deploy --all --timeout=5m >/dev/null
 
 .PHONY: apps
 apps:
+	@printf "$(Y)→ starting sample-app, load generator, drift simulator...$(N)\n"
 	@kubectl apply -f apps/00-sample-app.yaml -f apps/01-load-generator.yaml \
 		-f apps/02-alert-viewer.yaml -f apps/11-drift-simulator.yaml -f apps/12-demo-overrides.yaml >/dev/null
 	@kubectl -n apps rollout status deploy/sample-app --timeout=5m >/dev/null
@@ -180,6 +189,7 @@ apps:
 # The KServe webhook can take a few seconds to accept requests after the controller restarts.
 .PHONY: inference
 inference:
+	@printf "$(Y)→ deploying the doc-classifier InferenceService...$(N)\n"
 	@for i in $$(seq 1 20); do \
 		kubectl apply -f apps/10-inference-service.yaml >/dev/null 2>&1 && break; \
 		[ $$i -eq 20 ] && { kubectl apply -f apps/10-inference-service.yaml; exit 1; }; sleep 6; \
@@ -190,6 +200,7 @@ inference:
 
 .PHONY: load-dashboards
 load-dashboards:
+	@printf "$(Y)→ loading Grafana dashboards...$(N)\n"
 	@for f in dashboards/*.json; do \
 		name=$$(basename $$f .json); \
 		kubectl -n observability create configmap "grafana-$$name" --from-file="$$f" \
@@ -201,6 +212,7 @@ load-dashboards:
 # Nice to have, not required: a failure here warns instead of stopping 'make up'.
 .PHONY: seed-mlflow
 seed-mlflow:
+	@printf "$(Y)→ registering demo models in MLflow (~1 min)...$(N)\n"
 	@./scripts/seed-mlflow.sh >/dev/null 2>&1 \
 		|| printf "$(Y)⚠  MLflow seeding skipped (retry later with: make seed-mlflow)$(N)\n"
 
