@@ -1,0 +1,161 @@
+mode: deployment
+replicaCount: 1
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+
+# The chart defaults to the otelcol-k8s binary; the contrib image ships otelcol-contrib.
+command:
+  name: otelcol-contrib
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+ports:
+  otlp:
+    enabled: true
+    containerPort: 4317
+    servicePort: 4317
+    nodePort: 30317
+    protocol: TCP
+  otlp-http:
+    enabled: true
+    containerPort: 4318
+    servicePort: 4318
+    nodePort: 30318
+    protocol: TCP
+
+service:
+  type: NodePort
+
+presets:
+  kubernetesAttributes:
+    enabled: true
+
+extraEnvs:
+  - name: AWS_ACCESS_KEY_ID
+    valueFrom:
+      secretKeyRef:
+        name: minio-creds
+        key: AWS_ACCESS_KEY_ID
+  - name: AWS_SECRET_ACCESS_KEY
+    valueFrom:
+      secretKeyRef:
+        name: minio-creds
+        key: AWS_SECRET_ACCESS_KEY
+  - name: AWS_REGION
+    value: us-east-1
+
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+    prometheus:
+      config:
+        scrape_configs:
+          - job_name: otel-self
+            scrape_interval: 30s
+            static_configs:
+              - targets: ["localhost:8888"]
+
+  processors:
+    memory_limiter:
+      check_interval: 1s
+      limit_percentage: 80
+      spike_limit_percentage: 25
+    batch:
+      send_batch_size: 1024
+      timeout: 5s
+    k8sattributes:
+      auth_type: serviceAccount
+      passthrough: false
+      extract:
+        metadata: [k8s.namespace.name, k8s.pod.name, k8s.deployment.name, k8s.node.name]
+    resourcedetection:
+      detectors: [env, system]
+      timeout: 2s
+    filter/drop_debug:
+      logs:
+        log_record:
+          - 'severity_number < SEVERITY_NUMBER_INFO'
+    attributes/governance:
+      actions:
+        - key: deployment.environment
+          value: demo
+          action: upsert
+    transform/loki:
+      log_statements:
+        - context: log
+          statements:
+            - set(attributes["service_name"], resource.attributes["service.name"])
+            - set(attributes["k8s_namespace"], resource.attributes["k8s.namespace.name"])
+            - set(attributes["k8s_pod"], resource.attributes["k8s.pod.name"])
+
+  exporters:
+    otlphttp/prometheus:
+      endpoint: http://kube-prometheus-stack-prometheus.observability.svc:9090/api/v1/otlp
+      tls:
+        insecure: true
+
+    # Primary log surface locally — Loki is ARM64-native and boots fast.
+    # Production ships logs to Splunk HEC (see ../observability/helm/otel-collector/values-gateway.yaml).
+    otlphttp/loki:
+      endpoint: http://loki.observability.svc:3100/otlp
+      tls:
+        insecure: true
+      sending_queue:
+        enabled: true
+        num_consumers: 4
+        queue_size: 1000
+      retry_on_failure:
+        enabled: true
+
+    # Cold-archive sink — same shape as production, just S3-compatible MinIO.
+    awss3/archive:
+      s3uploader:
+        region: us-east-1
+        s3_bucket: log-archive
+        s3_prefix: apps/otel
+        endpoint: http://minio.storage.svc:9000
+        s3_force_path_style: true
+        compression: gzip
+
+    debug:
+      verbosity: basic
+
+  extensions:
+    health_check:
+      endpoint: 0.0.0.0:13133
+
+  service:
+    extensions: [health_check]
+    telemetry:
+      metrics:
+        readers:
+          - pull:
+              exporter:
+                prometheus:
+                  host: 0.0.0.0
+                  port: 8888
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [memory_limiter, k8sattributes, resourcedetection, attributes/governance, batch]
+        exporters: [debug]
+      metrics:
+        receivers: [otlp, prometheus]
+        processors: [memory_limiter, k8sattributes, resourcedetection, attributes/governance, batch]
+        exporters: [otlphttp/prometheus]
+      logs:
+        receivers: [otlp]
+        processors: [memory_limiter, k8sattributes, resourcedetection, attributes/governance, filter/drop_debug, transform/loki, batch]
+        exporters: [otlphttp/loki, awss3/archive, debug]

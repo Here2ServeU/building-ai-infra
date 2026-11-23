@@ -1,0 +1,43 @@
+mode: daemonset
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+
+# The chart defaults to the otelcol-k8s binary; the contrib image ships otelcol-contrib.
+command:
+  name: otelcol-contrib
+
+presets:
+  hostMetrics:
+    enabled: true
+  kubeletMetrics:
+    enabled: true
+  kubernetesAttributes:
+    enabled: true
+  logsCollection:
+    enabled: true
+    includeCollectorLogs: false
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+config:
+  exporters:
+    otlp/gateway:
+      endpoint: otel-collector-gateway-opentelemetry-collector.observability.svc:4317
+      tls:
+        insecure: true
+
+  service:
+    pipelines:
+      logs:
+        exporters: [otlp/gateway]
+      metrics:
+        exporters: [otlp/gateway]
+      traces:
+        exporters: [otlp/gateway]

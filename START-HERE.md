@@ -14,7 +14,7 @@ New to AI infrastructure? This page is your map. You don't need a cloud account,
 |:-:|---|---|---|
 | 1 | Read the **Part 1** summary: [PDF](docs/series/pdf/part-1-building-blocks.pdf) · [web](docs/series/part-1-building-blocks.md) | 15 min | $0 |
 | 2 | Run the demo API on your laptop ([below](#your-first-10-minutes)) | 10 min | $0 |
-| 3 | **Part 2:** build all 8 blocks on your laptop: [PDF](docs/series/pdf/part-2-laptop.pdf) | 1 hour | $0 |
+| 3 | **Part 2:** build all 8 blocks on your laptop: [PDF](docs/series/pdf/part-2-laptop.pdf) · code: [`demo/`](demo/) (`cd demo && make up`) | 1 hour | $0 |
 | 4 | Set a **budget alert** and request **GPU quota** on one cloud | 15 min | $0 |
 | 5 | Pick one cloud: **Part 3** [AWS](docs/series/pdf/part-3-aws.pdf), **Part 4** [Azure](docs/series/pdf/part-4-azure.pdf) or **Part 5** [Google Cloud](docs/series/pdf/part-5-gcp.pdf) | 2 hours | a few $, if you destroy the same day |
 | 6 | **Part 6:** [On-prem](docs/series/pdf/part-6-on-prem.pdf) (read, even if you have no data center) | 20 min | $0 |
@@ -48,6 +48,7 @@ make ask Q="what is GitOps?"
 | Folder | What it is | Which part |
 |---|---|---|
 | `docs/series/` | Chapter summaries (web + PDF) for every part | All |
+| `demo/` | All 8 blocks on your laptop with one command: `make up` | 2 |
 | `apps/` | The two apps: a Go question-answering API and a Python document loader | 2, 7 |
 | `terraform/` | Code that **builds** cloud infrastructure (networks, clusters, GPU pools) | 3, 4, 5 |
 | `helm/charts/` | **Packages** that install the apps on Kubernetes | 2–7 |

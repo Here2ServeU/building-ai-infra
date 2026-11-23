@@ -1,0 +1,78 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Logs Ingested to Splunk (last 1h)",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 4 },
+      "targets": [
+        {
+          "expr": "sum(increase(otelcol_exporter_sent_log_records{exporter=\"splunk_hec/logs\"}[1h]))",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "prometheus" }
+    },
+    {
+      "type": "stat",
+      "title": "Logs Dropped (last 1h)",
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 4 },
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } } },
+      "targets": [
+        {
+          "expr": "sum(increase(otelcol_processor_dropped_log_records[1h]))",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "prometheus" }
+    },
+    {
+      "type": "timeseries",
+      "title": "Log Records/sec by Source Service",
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (service_name) (rate(otelcol_exporter_sent_log_records[5m]))",
+          "refId": "A",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "prometheus" }
+    },
+    {
+      "type": "timeseries",
+      "title": "OTel Collector Queue Saturation",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "otelcol_exporter_queue_size / otelcol_exporter_queue_capacity",
+          "refId": "A",
+          "legendFormat": "{{exporter}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1 } },
+      "datasource": { "type": "prometheus", "uid": "prometheus" }
+    },
+    {
+      "type": "timeseries",
+      "title": "S3 Archive PutObject Rate",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(otelcol_exporter_sent_log_records{exporter=\"awss3/archive\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "prometheus" }
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["logs", "cost", "observability"],
+  "templating": { "list": [] },
+  "time": { "from": "now-24h", "to": "now" },
+  "title": "Log Volume & Cost Control",
+  "uid": "log-volume-cost",
+  "version": 1
+}

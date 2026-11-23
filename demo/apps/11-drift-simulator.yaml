@@ -1,0 +1,109 @@
+# Emits model_feature_psi gauge per feature. Toggleable via DRIFT_MODE env var:
+#   none    → PSI hovers near 0
+#   warn    → PSI ~ 0.22 (warning)
+#   crit    → PSI ~ 0.30 (critical)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: drift-simulator-code
+  namespace: mlops
+data:
+  app.py: |
+    import os, time, random
+    from prometheus_client import Gauge, start_http_server
+
+    PSI = Gauge("model_feature_psi", "Feature drift PSI", ["model_name", "feature_name"])
+    PRED_MEAN = Gauge("model_prediction_distribution_mean", "Avg prediction mean", ["model_name"])
+    F1 = Gauge("model_evaluation_f1_score", "Latest training F1", ["model_name"])
+    LAST_RUN = Gauge("model_last_training_run_timestamp_seconds", "Last training run", ["model_name"])
+
+    FEATURES = ["age", "income", "transaction_count", "avg_amount"]
+    MODEL = "doc-classifier"
+
+    def target():
+        m = os.environ.get("DRIFT_MODE", "none")
+        if m == "none": return 0.05, 0.02
+        if m == "warn": return 0.22, 0.02
+        if m == "crit": return 0.30, 0.02
+        return 0.05, 0.02
+
+    if __name__ == "__main__":
+        start_http_server(9464)
+        F1.labels(MODEL).set(0.94)
+        LAST_RUN.labels(MODEL).set(time.time() - 3 * 86400)
+        while True:
+            mean, jitter = target()
+            for f in FEATURES:
+                PSI.labels(MODEL, f).set(max(0, random.gauss(mean, jitter)))
+            PRED_MEAN.labels(MODEL).set(random.gauss(0.5, 0.02))
+            time.sleep(5)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drift-simulator
+  namespace: mlops
+  labels:
+    app.kubernetes.io/name: drift-simulator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: drift-simulator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: drift-simulator
+    spec:
+      containers:
+        - name: sim
+          image: python:3.12-slim
+          command: ["sh", "-c"]
+          args:
+            - "pip install --quiet prometheus_client && python /code/app.py"
+          env:
+            - name: DRIFT_MODE
+              value: "none"
+          ports:
+            - name: metrics
+              containerPort: 9464
+          volumeMounts:
+            - name: code
+              mountPath: /code
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 100m, memory: 128Mi }
+      volumes:
+        - name: code
+          configMap:
+            name: drift-simulator-code
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: drift-simulator
+  namespace: mlops
+  labels:
+    app.kubernetes.io/name: drift-simulator
+spec:
+  selector:
+    app.kubernetes.io/name: drift-simulator
+  ports:
+    - name: metrics
+      port: 9464
+      targetPort: metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: drift-simulator
+  namespace: mlops
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: drift-simulator
+  endpoints:
+    - port: metrics
+      interval: 15s

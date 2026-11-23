@@ -25,7 +25,7 @@ To edit a summary, change the `.md` file and run `make pdfs`. The PDF styling li
 | Part | Title | What you build | Where the code is |
 | :-: | --- | --- | --- |
 | 1 | The Building Blocks | No code: the 8 blocks, explained as a restaurant kitchen | [The 8 building blocks](#the-8-building-blocks) below |
-| 2 | The Foundation on Your Laptop | All 8 blocks on kind, for free | [nawex-observability-case-study](https://github.com/Here2ServeU/nawex-observability-case-study) `demo/` |
+| 2 | The Foundation on Your Laptop | All 8 blocks on kind, for free | [`demo/`](../../demo/) |
 | 3 | AWS: EKS and GPUs | VPC + EKS + GPU node group that scales 0 to N | [nawex-platform](https://github.com/Here2ServeU/nawex-platform), or here: [`terraform/modules/eks`](../../terraform/modules/eks) (`gpu_enabled`) |
 | 4 | Azure: AKS and GPUs | VNet + AKS with system, Spot and GPU pools; Workload Identity | nawex-platform, or here: [`terraform/modules/aks`](../../terraform/modules/aks) (`spot_enabled`, `gpu_enabled`) |
 | 5 | Google Cloud: GKE and GPUs | Private GKE, Google-managed GPU driver, SLOs as code | nawex-platform, or here: [`terraform/modules/gke`](../../terraform/modules/gke) (`gpu_enabled`); SLOs: express-reliability-platform-course v10 |

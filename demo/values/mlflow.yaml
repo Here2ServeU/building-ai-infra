@@ -1,0 +1,44 @@
+replicaCount: 1
+
+service:
+  type: NodePort
+  port: 5000
+  nodePort: 30500
+
+backendStore:
+  # Off: the check's init image is not needed (Postgres is already up) and avoids an extra pull.
+  databaseConnectionCheck: false
+  postgres:
+    enabled: true
+    host: postgres.storage.svc
+    port: 5432
+    database: mlflow
+    user: mlflow
+    password: mlflow
+
+artifactRoot:
+  s3:
+    enabled: true
+    bucket: mlflow-artifacts
+    path: mlflow
+    awsAccessKeyId: minioadmin
+    awsSecretAccessKey: minioadmin
+
+extraEnvVars:
+  MLFLOW_S3_ENDPOINT_URL: http://minio.storage.svc:9000
+  AWS_ACCESS_KEY_ID: minioadmin
+  AWS_SECRET_ACCESS_KEY: minioadmin
+  AWS_DEFAULT_REGION: us-east-1
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+serviceMonitor:
+  enabled: true
+  labels:
+    release: kube-prometheus-stack

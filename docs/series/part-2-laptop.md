@@ -6,7 +6,7 @@ part: 2
 
 **In one sentence:** run all 8 building blocks on your own laptop, for free, with the same tools you'll later use in every cloud.
 
-**Video length:** about 10 minutes · **Code:** [nawex-observability-case-study](https://github.com/Here2ServeU/nawex-observability-case-study) (folder `demo/`) · **Cost:** $0
+**Video length:** about 10 minutes · **Code:** [`demo/`](../../demo/) in this repo · **Cost:** $0
 
 ## Why start on a laptop
 
@@ -28,14 +28,14 @@ The cloud charges you while you learn. On a laptop you can break things, rebuild
 ## What you need
 
 - Docker Desktop with **at least 6 CPUs and 10 GB of memory** (Docker settings → Resources).
-- Tools: kind, kubectl, helm, jq, curl, git, docker compose v2. Run `make doctor` in this repo to check.
+- Tools: kind, kubectl, helm, jq, curl, git. Run `make doctor` in this repo to check.
 
 ## Build it: one command
 
 ```bash
-git clone https://github.com/Here2ServeU/nawex-observability-case-study
-cd nawex-observability-case-study/demo
-make up      # about 5 minutes the first time; watch each block report "ready"
+git clone https://github.com/Here2ServeU/building-ai-infra
+cd building-ai-infra/demo
+make up      # about 10 minutes the first time; watch each block report "ready"
 make demo    # opens Grafana, Alertmanager, Prometheus and MLflow
 ```
 
@@ -55,7 +55,7 @@ If something fails, the most common cause is not enough memory for Docker. Raise
 
 > You should only trust an alert you've actually watched fire.
 
-**Data drift (unique to AI).** Run `make scenario-drift`. The incoming data stops looking like the training data, and the model quietly gets worse while nothing crashes. The **PSI** (population stability index) score rises, and the drift alert fires in about 3 minutes. Respond by retraining, or roll back with `make scenario-rollback`.
+**Data drift (unique to AI).** Run `make scenario-drift`. The incoming data stops looking like the training data, and the model quietly gets worse while nothing crashes. The **PSI** (population stability index) score rises, and the drift alert fires in 1 to 3 minutes. Respond by retraining, or roll back with `make scenario-rollback`.
 
 ## Laptop vs. the real thing
 

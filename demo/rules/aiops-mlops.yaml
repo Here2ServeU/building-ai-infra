@@ -1,0 +1,160 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: aiops-mlops
+  namespace: observability
+  labels:
+    release: kube-prometheus-stack
+    role: alert-rules
+spec:
+  groups:
+    - name: model-serving-slo
+      interval: 30s
+      rules:
+        - record: model:inference_latency_p95:5m
+          expr: histogram_quantile(0.95, sum by (le, model_name) (rate(inference_request_duration_seconds_bucket[5m])))
+
+        - record: model:inference_error_ratio:5m
+          expr: |
+            sum by (model_name) (rate(inference_requests_total{code=~"5..|4.."}[5m]))
+            /
+            sum by (model_name) (rate(inference_requests_total[5m]))
+
+        - alert: ModelInferenceLatencyHigh
+          expr: model:inference_latency_p95:5m > 1
+          for: 10m
+          labels:
+            severity: warning
+            component: mlops
+          annotations:
+            summary: "Model {{ $labels.model_name }} p95 latency > 1s"
+            runbook_url: "https://runbooks.${BASE_DOMAIN}/model-latency"
+
+        - alert: ModelInferenceErrorBudgetBurn
+          expr: model:inference_error_ratio:5m > (14.4 * (1 - 0.99))
+          for: 5m
+          labels:
+            severity: critical
+            component: mlops
+            slo: model-availability
+          annotations:
+            summary: "Model {{ $labels.model_name }} burning error budget at >14.4x"
+
+    - name: model-drift
+      interval: 60s
+      rules:
+        # Population Stability Index (PSI) emitted by the feature-validator transformer.
+        # PSI > 0.2 = significant distribution shift; PSI > 0.25 = retrain.
+        - alert: FeatureDriftWarning
+          expr: max by (model_name, feature_name) (model_feature_psi) > 0.2
+          for: 30m
+          labels:
+            severity: warning
+            component: aiops
+          annotations:
+            summary: "Feature drift detected: {{ $labels.model_name }} / {{ $labels.feature_name }} (PSI > 0.2)"
+            description: "Production input distribution has shifted from training reference. Investigate before model accuracy degrades."
+
+        - alert: FeatureDriftCritical
+          expr: max by (model_name, feature_name) (model_feature_psi) > 0.25
+          for: 1h
+          labels:
+            severity: critical
+            component: aiops
+          annotations:
+            summary: "Severe feature drift: {{ $labels.model_name }} / {{ $labels.feature_name }} — schedule retrain"
+
+        - alert: PredictionDistributionShift
+          expr: |
+            abs(
+              avg_over_time(model_prediction_distribution_mean[1h])
+              -
+              avg_over_time(model_prediction_distribution_mean[1h] offset 7d)
+            ) > 0.1
+          for: 30m
+          labels:
+            severity: warning
+            component: aiops
+          annotations:
+            summary: "Prediction distribution shifted >0.1 vs same-time-last-week"
+
+        - alert: ConfidenceScoreDrop
+          expr: avg by (model_name) (rate(model_prediction_confidence_sum[15m])) / avg by (model_name) (rate(model_prediction_confidence_count[15m])) < 0.7
+          for: 15m
+          labels:
+            severity: warning
+            component: aiops
+          annotations:
+            summary: "Average prediction confidence < 0.7 for {{ $labels.model_name }} — possible OOD inputs"
+
+    - name: training-pipeline-health
+      interval: 60s
+      rules:
+        - alert: TrainingJobFailed
+          expr: kube_job_status_failed{namespace="mlops"} > 0
+          for: 5m
+          labels:
+            severity: critical
+            component: mlops
+          annotations:
+            summary: "Training job {{ $labels.job_name }} failed"
+
+        - alert: ModelMetricsBelowPromotionGate
+          expr: model_evaluation_f1_score < 0.92
+          for: 0m
+          labels:
+            severity: warning
+            component: mlops
+          annotations:
+            summary: "{{ $labels.model_name }} latest training run F1 < 0.92 promotion gate"
+            description: "Model will not auto-promote. Manual review required."
+
+        - alert: NoTrainingRunInWindow
+          expr: time() - max(model_last_training_run_timestamp_seconds) > (14 * 24 * 3600)
+          for: 1h
+          labels:
+            severity: warning
+            component: mlops
+          annotations:
+            summary: "No model training run in 14d — pipeline may be stalled"
+
+    - name: aiops-anomaly
+      interval: 60s
+      rules:
+        # Holt-Winters style detector: error rate > 4 stddev above the trailing baseline.
+        - record: api:error_rate:1m
+          expr: sum(rate(http_requests_total{code=~"5.."}[1m])) / sum(rate(http_requests_total[1m]))
+
+        - record: api:error_rate_baseline:1h
+          expr: avg_over_time(api:error_rate:1m[1h] offset 1h)
+
+        - record: api:error_rate_stddev:1h
+          expr: stddev_over_time(api:error_rate:1m[1h] offset 1h)
+
+        - alert: AnomalousErrorRate
+          expr: api:error_rate:1m > (api:error_rate_baseline:1h + 4 * api:error_rate_stddev:1h)
+          for: 5m
+          labels:
+            severity: warning
+            component: aiops
+            detector: stddev-baseline
+          annotations:
+            summary: "API error rate is >4σ above trailing-hour baseline"
+            description: "Statistical anomaly detected. Use this as a signal even when no static threshold has fired."
+
+        - alert: LogVolumeAnomaly
+          expr: |
+            sum(rate(otelcol_exporter_sent_log_records[10m]))
+            >
+            (
+              avg_over_time(sum(rate(otelcol_exporter_sent_log_records[10m]))[1d:10m] offset 1d)
+              + 4 * stddev_over_time(sum(rate(otelcol_exporter_sent_log_records[10m]))[1d:10m] offset 1d)
+            )
+          for: 15m
+          labels:
+            severity: warning
+            component: aiops
+            detector: stddev-baseline
+            cost: log-volume
+          annotations:
+            summary: "Log ingestion >4σ above 24h baseline — investigate noisy emitter before billing impact"

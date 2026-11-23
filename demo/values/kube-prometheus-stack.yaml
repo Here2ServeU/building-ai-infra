@@ -1,0 +1,135 @@
+fullnameOverride: kube-prometheus-stack
+
+defaultRules:
+  create: true
+
+prometheus:
+  service:
+    type: NodePort
+    nodePort: 30900
+  prometheusSpec:
+    retention: 6h
+    enableFeatures:
+      - remote-write-receiver
+      - otlp-write-receiver
+    # Prometheus 3.x name for the same thing (older chart versions ignore it)
+    enableOTLPReceiver: true
+    walCompression: true
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 200m
+        memory: 1Gi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+
+alertmanager:
+  service:
+    type: NodePort
+    nodePort: 30903
+  alertmanagerSpec:
+    replicas: 1
+    retention: 24h
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 1Gi
+  config:
+    global:
+      resolve_timeout: 1m
+    route:
+      group_by: [alertname, severity]
+      group_wait: 10s
+      group_interval: 30s
+      repeat_interval: 5m
+      receiver: webhook-default
+      routes:
+        - matchers: [severity = "critical"]
+          receiver: webhook-page
+        - matchers: [severity = "warning"]
+          receiver: webhook-notify
+        - matchers: [severity = "info"]
+          receiver: "null"
+    receivers:
+      - name: "null"
+      - name: webhook-default
+        webhook_configs:
+          - url: http://alert-viewer.observability.svc:8080/default
+            send_resolved: true
+      - name: webhook-page
+        webhook_configs:
+          - url: http://alert-viewer.observability.svc:8080/page
+            send_resolved: true
+      - name: webhook-notify
+        webhook_configs:
+          - url: http://alert-viewer.observability.svc:8080/notify
+            send_resolved: true
+    inhibit_rules:
+      - source_matchers: [severity = "critical"]
+        target_matchers: [severity = "warning"]
+        equal: [alertname]
+
+grafana:
+  service:
+    type: NodePort
+    nodePort: 30300
+  adminUser: admin
+  adminPassword: admin
+  defaultDashboardsTimezone: utc
+  persistence:
+    enabled: true
+    size: 2Gi
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL
+    datasources:
+      enabled: true
+      label: grafana_datasource
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      url: http://loki.observability.svc:3100
+      access: proxy
+      isDefault: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 200Mi
+
+kubeStateMetrics:
+  enabled: true
+
+nodeExporter:
+  enabled: true
+
+# kind does not expose these control-plane components to scrapes; disabling them keeps
+# Alertmanager free of TargetDown noise so the demo alerts stand out.
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
