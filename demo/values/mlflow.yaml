@@ -6,21 +6,23 @@ service:
   type: NodePort
   port: 5000
 
-# MLflow 3.x rejects requests whose Host header it doesn't recognize.
-# Allow the browser (localhost:5001) and in-cluster callers (the seed job).
+# MLflow 3.x rejects requests whose Host header isn't on this list. That includes
+# Kubernetes health checks, which use the pod IP, so a short list makes the pod restart
+# forever. "*" is fine for a laptop demo; in production list your real hostnames.
 serverAllowedHosts:
-  - localhost
-  - "localhost:*"
-  - 127.0.0.1
-  - "127.0.0.1:*"
-  - mlflow
-  - "mlflow:*"
-  - mlflow.mlops
-  - "mlflow.mlops:*"
-  - mlflow.mlops.svc
-  - "mlflow.mlops.svc:*"
-  - mlflow.mlops.svc.cluster.local
-  - "mlflow.mlops.svc.cluster.local:*"
+  - "*"
+
+# MLflow 3 can take a while to start on a laptop; give the health checks more room.
+livenessProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 20
+  timeoutSeconds: 10
+  failureThreshold: 6
+readinessProbe:
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 10
+  failureThreshold: 6
 
 backendStore:
   # Off: the check's init image is not needed (Postgres is already up) and avoids an extra pull.
