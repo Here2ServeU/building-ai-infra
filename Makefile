@@ -16,6 +16,10 @@ help: ## Show this help
 doctor: ## Check which tools you have (read-only, installs nothing)
 	@bash scripts/check-prereqs.sh
 
+.PHONY: install-tools
+install-tools: ## Install kind, kubectl, helm and jq for the laptop demo (macOS, Linux, WSL)
+	@bash scripts/install-tools.sh
+
 .PHONY: start
 start: ## Run the demo RAG API on your laptop (no cloud, no Docker). Ctrl+C stops it
 	@echo "Starting the API in stub mode on http://localhost:8080 ..."

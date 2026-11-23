@@ -27,8 +27,22 @@ The cloud charges you while you learn. On a laptop you can break things, rebuild
 
 ## What you need
 
-- Docker Desktop with **at least 6 CPUs and 10 GB of memory** (Docker settings → Resources).
-- Tools: kind, kubectl, helm, jq, curl, git. Run `make doctor` in this repo to check.
+- **Docker Desktop** with **at least 6 CPUs and 10 GB of memory** (Docker settings → Resources). Install it from [docs.docker.com/get-docker](https://docs.docker.com/get-docker/).
+- **git** and **make**. New to these? Watch: [Install Git on Windows](https://www.youtube.com/watch?v=f091sbQSv7I) · [Install Git on Mac](https://www.youtube.com/watch?v=8ZIiXg4XOY0).
+- **kind, kubectl, helm, jq**. You don't need to install these one by one. The repo does it for you:
+
+```bash
+git clone https://github.com/Here2ServeU/building-ai-infra
+cd building-ai-infra
+make install-tools   # installs kind, kubectl, helm, jq; skips what you already have
+make doctor          # checks everything; installs nothing
+```
+
+| Your computer | How `make install-tools` works |
+|---|---|
+| **Mac** | Uses [Homebrew](https://brew.sh). Install Homebrew first if you don't have it. |
+| **Linux** | Downloads the official tools into `/usr/local/bin` (asks for your password once). |
+| **Windows** | Use **WSL 2**: run `wsl --install` in PowerShell as admin and restart. In Docker Desktop, turn on Settings → Resources → WSL integration. Then open Ubuntu and run the commands above there. |
 
 ## Build it: one command
 

@@ -31,6 +31,7 @@ check cloud docker    "containers and the kind laptop cluster (Part 2)" "https:/
 check cloud kind      "Kubernetes inside Docker (Part 2)"               "https://kind.sigs.k8s.io/  (or: brew install kind)"
 check cloud kubectl   "talk to any Kubernetes cluster"                  "https://kubernetes.io/docs/tasks/tools/"
 check cloud helm      "install packaged apps (charts)"                  "https://helm.sh/docs/intro/install/"
+check cloud jq        "read JSON in the demo scripts (Part 2)"          "brew install jq · apt install jq"
 check cloud terraform "build cloud infrastructure from code (Parts 3-5)" "https://developer.hashicorp.com/terraform/install"
 
 if command -v terraform >/dev/null 2>&1; then
@@ -58,7 +59,7 @@ else
   echo "${yellow}Install the ${missing_local} missing Step 1 tool(s) above, then run make doctor again.${reset}"
 fi
 if [ "$missing_cloud" -gt 0 ]; then
-  echo "${dim}Step 2 tools can wait until you reach Part 2.${reset}"
+  echo "${dim}Step 2 tools can wait until you reach Part 2. To install kind, kubectl, helm and jq in one go: make install-tools${reset}"
 fi
 echo
 exit 0

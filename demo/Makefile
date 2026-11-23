@@ -55,7 +55,7 @@ preflight:
 		command -v $$t >/dev/null 2>&1 || missing="$$missing $$t"; \
 	done; \
 	if [ -n "$$missing" ]; then \
-		printf "$(R)✗ missing tools:$$missing$(N)  (run 'make doctor' from the repo root for install hints)\n"; exit 1; \
+		printf "$(R)✗ missing tools:$$missing$(N)  (install them with 'make install-tools' from the repo root)\n"; exit 1; \
 	fi
 	@docker info >/dev/null 2>&1 || { printf "$(R)✗ Docker is not running. Start Docker Desktop and retry.$(N)\n"; exit 1; }
 	@if ! kind get clusters 2>/dev/null | grep -qx "$(CLUSTER_NAME)"; then \

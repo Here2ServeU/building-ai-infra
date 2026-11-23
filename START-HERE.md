@@ -68,6 +68,7 @@ make ask Q="what is GitOps?"
 ```bash
 make help        # every shortcut, grouped
 make doctor      # which tools you have
+make install-tools  # install kind, kubectl, helm, jq (Part 2)
 make start       # demo API on your laptop
 make ask Q="..." # ask the demo API
 make pdfs        # rebuild the chapter PDFs (needs pandoc + Chrome)

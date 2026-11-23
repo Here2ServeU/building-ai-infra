@@ -17,7 +17,7 @@ Kubernetes cluster in Docker with storage, MLOps, model serving and full observa
 ## What you need
 
 - Docker Desktop with **at least 6 CPUs and 10 GB of memory** (Settings → Resources).
-- `kind`, `kubectl`, `helm`, `jq`, `curl`, `git`. Run `make doctor` from the repo root to check.
+- `kind`, `kubectl`, `helm`, `jq`, `curl`, `git`. From the repo root, `make install-tools` installs the first four (Mac, Linux, or Windows via WSL 2), and `make doctor` checks everything.
 - Internet access the first time (images and Helm charts are downloaded).
 
 ## Run it
