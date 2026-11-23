@@ -57,5 +57,7 @@ resources:
 
 serviceMonitor:
   enabled: true
+  # The chart defaults to a "monitoring" namespace; this demo runs Prometheus in "observability".
+  namespace: observability
   labels:
     release: kube-prometheus-stack

@@ -17,6 +17,15 @@ OTEL_VERSION   ?=
 MLFLOW_VERSION ?=
 ver = $(if $(1),--version $(1),)
 
+# A release left "failed" or "pending" by an interrupted run blocks 'helm upgrade';
+# remove it so the next install starts clean.
+define helm_reset
+	@st=$$(helm status $(1) -n $(2) -o json 2>/dev/null | jq -r '.info.status' 2>/dev/null || true); \
+	if [ -n "$$st" ] && [ "$$st" != "deployed" ]; then \
+		printf "  removing $(1) release left in state '$$st'\n"; helm uninstall $(1) -n $(2) --wait >/dev/null 2>&1 || true; \
+	fi
+endef
+
 G := \033[1;32m
 Y := \033[1;33m
 R := \033[1;31m
@@ -120,6 +129,7 @@ helm-repos:
 .PHONY: loki
 loki:
 	@printf "$(Y)→ installing Loki (logs)...$(N)\n"
+	$(call helm_reset,loki,observability)
 	@helm upgrade --install loki grafana/loki $(call ver,$(LOKI_VERSION)) \
 		--namespace observability --values values/loki.yaml --timeout 10m >/dev/null
 	@kubectl -n observability rollout status statefulset/loki --timeout=10m >/dev/null
@@ -128,6 +138,7 @@ loki:
 .PHONY: prometheus-stack
 prometheus-stack:
 	@printf "$(Y)→ installing Prometheus, Grafana, Alertmanager (largest step, 3-8 min)...$(N)\n"
+	$(call helm_reset,kube-prometheus-stack,observability)
 	@helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack $(call ver,$(KPS_VERSION)) \
 		--namespace observability --values values/kube-prometheus-stack.yaml --wait --timeout 15m >/dev/null
 	@kubectl apply -f rules/ >/dev/null
@@ -136,8 +147,10 @@ prometheus-stack:
 .PHONY: otel
 otel:
 	@printf "$(Y)→ installing OpenTelemetry gateway + agent (~300 MB image)...$(N)\n"
+	$(call helm_reset,otel-collector-gateway,observability)
 	@helm upgrade --install otel-collector-gateway open-telemetry/opentelemetry-collector $(call ver,$(OTEL_VERSION)) \
 		--namespace observability --values values/otel-gateway.yaml --timeout 10m >/dev/null
+	$(call helm_reset,otel-agent,observability)
 	@helm upgrade --install otel-agent open-telemetry/opentelemetry-collector $(call ver,$(OTEL_VERSION)) \
 		--namespace observability --values values/otel-agent.yaml --timeout 10m >/dev/null
 	@kubectl -n observability rollout status deploy/otel-collector-gateway-opentelemetry-collector --timeout=10m >/dev/null
@@ -147,6 +160,7 @@ otel:
 .PHONY: mlflow
 mlflow:
 	@printf "$(Y)→ installing MLflow...$(N)\n"
+	$(call helm_reset,mlflow,mlops)
 	@helm upgrade --install mlflow community-charts/mlflow $(call ver,$(MLFLOW_VERSION)) \
 		--namespace mlops --values values/mlflow.yaml --timeout 10m >/dev/null
 	@# Pin the NodePort so http://localhost:5001 always works, whatever the chart defaults to.
