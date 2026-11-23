@@ -71,10 +71,14 @@ Compute, data and network sit at the bottom. Kubernetes sits on top of them. MLO
 This repo has a tiny "ask the platform" demo that runs on your laptop with no cloud:
 
 ```bash
-make doctor                                   # checks your tools
-make start                                    # terminal 1: starts the demo API
-make ask Q="what does the head chef do?"      # terminal 2: ask a question
+make doctor
+make start
+make ask Q="what does the head chef do?"
 ```
+
+- `make doctor`: checks your tools
+- `make start`: terminal 1: starts the demo API
+- `make ask Q="what does the head chef do?"`: terminal 2: ask a question
 
 ## Before Part 2
 

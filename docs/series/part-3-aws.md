@@ -47,10 +47,13 @@ With nawex-platform (the path used in the video):
 ```bash
 git clone https://github.com/Here2ServeU/nawex-platform && cd nawex-platform
 cp deploy/terraform/live/aws/dev/terraform.tfvars.example deploy/terraform/live/aws/dev/terraform.tfvars
-GPU_ENABLED=1 scripts/deploy.sh aws dev plan     # always look before you build
-GPU_ENABLED=1 scripts/deploy.sh aws dev apply    # about 15 minutes
+GPU_ENABLED=1 scripts/deploy.sh aws dev plan
+GPU_ENABLED=1 scripts/deploy.sh aws dev apply
 kubectl get nodes -L nvidia.com/gpu.present -L node.kubernetes.io/instance-type
 ```
+
+- `GPU_ENABLED=1 scripts/deploy.sh aws dev plan`: always look before you build
+- `GPU_ENABLED=1 scripts/deploy.sh aws dev apply`: about 15 minutes
 
 Or with this repo:
 

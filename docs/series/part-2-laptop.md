@@ -34,9 +34,12 @@ The cloud charges you while you learn. On a laptop you can break things, rebuild
 ```bash
 git clone https://github.com/Here2ServeU/building-ai-infra
 cd building-ai-infra
-make install-tools   # installs kind, kubectl, helm, jq; skips what you already have
-make doctor          # checks everything; installs nothing
+make install-tools
+make doctor
 ```
+
+- `make install-tools`: installs kind, kubectl, helm, jq; skips what you already have
+- `make doctor`: checks everything; installs nothing
 
 | Your computer | How `make install-tools` works |
 |---|---|
@@ -49,9 +52,12 @@ make doctor          # checks everything; installs nothing
 ```bash
 git clone https://github.com/Here2ServeU/building-ai-infra
 cd building-ai-infra/demo
-make up      # about 10 minutes the first time; watch each block report "ready"
-make demo    # opens Grafana, Alertmanager, Prometheus and MLflow
+make up
+make demo
 ```
+
+- `make up`: about 10 minutes the first time; watch each block report "ready"
+- `make demo`: opens Grafana, Alertmanager, Prometheus and MLflow
 
 ### What you'll see
 

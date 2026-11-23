@@ -29,9 +29,12 @@ You need `git`, `go` and `make`. The first command tells you if anything is miss
 ```bash
 git clone https://github.com/Here2ServeU/building-ai-infra
 cd building-ai-infra
-make doctor          # checks your tools; installs nothing
-make start           # starts the demo API (leave this terminal open)
+make doctor
+make start
 ```
+
+- `make doctor`: checks your tools; installs nothing
+- `make start`: starts the demo API (leave this terminal open)
 
 In a **second terminal**, ask it questions:
 
@@ -66,13 +69,20 @@ make ask Q="what is GitOps?"
 ## Handy commands
 
 ```bash
-make help        # every shortcut, grouped
-make doctor      # which tools you have
-make install-tools  # install kind, kubectl, helm, jq (Part 2)
-make start       # demo API on your laptop
-make ask Q="..." # ask the demo API
-make pdfs        # rebuild the chapter PDFs (needs pandoc + Chrome)
+make help
+make doctor
+make install-tools
+make start
+make ask Q="..."
+make pdfs
 ```
+
+- `make help`: every shortcut, grouped
+- `make doctor`: which tools you have
+- `make install-tools`: install kind, kubectl, helm, jq (Part 2)
+- `make start`: demo API on your laptop
+- `make ask Q="..."`: ask the demo API
+- `make pdfs`: rebuild the chapter PDFs (needs pandoc + Chrome)
 
 ## Where to get help
 

@@ -23,7 +23,11 @@ kubectl get events --sort-by=.lastTimestamp | tail -50
 
 ```bash
 kubectl drain <node> --ignore-daemonsets --delete-emptydir-data --force --grace-period=120
-# Cluster autoscaler will replace it; for AWS:
+```
+
+Cluster autoscaler will replace it; for AWS:
+
+```bash
 aws ec2 terminate-instances --instance-ids <id>
 ```
 

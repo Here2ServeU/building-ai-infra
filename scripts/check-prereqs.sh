@@ -37,7 +37,13 @@ check cloud terraform "build cloud infrastructure from code (Parts 3-5)" "https:
 if command -v terraform >/dev/null 2>&1; then
   tfv=$(terraform version -json 2>/dev/null | sed -n 's/.*"terraform_version": *"\([0-9.]*\)".*/\1/p')
   if [ -n "$tfv" ] && [ "$(printf '%s\n1.6.0\n' "$tfv" | sort -V | head -1)" != "1.6.0" ]; then
-    printf "      ${yellow}! terraform %s is too old; this repo needs 1.6 or newer${reset}\n" "$tfv"
+    printf "      ${yellow}! terraform %s is too old; this repo needs 1.6 or newer (only for Parts 3-5)${reset}\n" "$tfv"
+    if command -v brew >/dev/null 2>&1 && brew list terraform >/dev/null 2>&1; then
+      printf "      ${dim}Homebrew's own terraform stops at 1.5.7. Switch to HashiCorp's:${reset}\n"
+      printf "      ${dim}brew uninstall terraform && brew install hashicorp/tap/terraform${reset}\n"
+    else
+      printf "      ${dim}upgrade: https://developer.hashicorp.com/terraform/install${reset}\n"
+    fi
   fi
 fi
 

@@ -71,12 +71,18 @@ Part 1 covered the 8 blocks. Part 2 ran all 8 on a laptop. Parts 3–5 moved the
 ## Try it
 
 ```bash
-make doctor                                   # check your tools
-make start                                    # run the demo API locally (terminal 1)
-make ask Q="what is GitOps?"                  # ask it (terminal 2)
-ls flux/clusters                              # one folder per cluster in the fleet
-cat flux/infrastructure/policy/*.yaml         # the rules every cluster gets
+make doctor
+make start
+make ask Q="what is GitOps?"
+ls flux/clusters
+cat flux/infrastructure/policy/*.yaml
 ```
+
+- `make doctor`: check your tools
+- `make start`: run the demo API locally (terminal 1)
+- `make ask Q="what is GitOps?"`: ask it (terminal 2)
+- `ls flux/clusters`: one folder per cluster in the fleet
+- `cat flux/infrastructure/policy/*.yaml`: the rules every cluster gets
 
 ## Words to know
 

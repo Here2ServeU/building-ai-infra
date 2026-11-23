@@ -60,12 +60,21 @@ Before you turn it on, every time:
    - GCP: "NVIDIA T4 GPUs" in your region **and** "GPUs (all regions)".
 3. Plan before you apply, then destroy the same day.
 
+AWS (dev-eks):
+
 ```bash
-# AWS (dev-eks)
 terraform -chdir=terraform/environments/dev plan -var gpu_enabled=true -out=plan.tfplan
-# Azure (prod-aks): add the Spot pool for retryable batch work
+```
+
+Azure (prod-aks): add the Spot pool for retryable batch work:
+
+```bash
 terraform -chdir=terraform/environments/prod plan -var gpu_enabled=true -var spot_enabled=true -out=plan.tfplan
-# GCP (staging-gke): GKE installs the driver (gpu_driver_version = DEFAULT)
+```
+
+GCP (staging-gke): GKE installs the driver (gpu_driver_version = DEFAULT):
+
+```bash
 terraform -chdir=terraform/environments/staging plan -var gpu_enabled=true -out=plan.tfplan
 ```
 

@@ -61,33 +61,51 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the system design and [docs/](docs/) 
 
 ## Quick start
 
+1. Provision a dev cluster (AWS EKS in us-east-1):
+
 ```bash
-# 1. Provision a dev cluster (AWS EKS in us-east-1)
 make tf-init ENV=dev
 make tf-apply ENV=dev
+```
 
-# 2. Bootstrap GitOps against the new cluster — pick one of:
-make flux-bootstrap   CLUSTER=dev-eks   # FluxCD (default)
-make argocd-bootstrap CLUSTER=dev-eks   # ArgoCD (alternative)
+2. Bootstrap GitOps against the new cluster, then verify it reconciles. Pick one.
 
-# 3. Verify reconciliation
-flux get kustomizations -A   # if Flux
-argocd app list              # if ArgoCD
+FluxCD (default):
+
+```bash
+make flux-bootstrap CLUSTER=dev-eks
+flux get kustomizations -A
+```
+
+ArgoCD (alternative):
+
+```bash
+make argocd-bootstrap CLUSTER=dev-eks
+argocd app list
 ```
 
 The cluster comes up with the platform stack (cert-manager, ingress-nginx, kube-prometheus-stack, Loki, Tempo) reconciled from `flux/clusters/dev-eks/` or `argocd/clusters/dev-eks/`. See [argocd/README.md](argocd/README.md) for the comparison and trade-offs.
 
 ## Local development
 
+Run the RAG API locally in stub mode (no cluster, embedder or vector DB needed):
+
 ```bash
-# Run the RAG API locally in stub mode (no cluster, embedder or vector DB needed)
 make start
-make ask Q="what is GitOps?"     # in a second terminal
+make ask Q="what is GitOps?"
+```
 
-# Run the ingest worker against a local Airflow + MLflow
+- `make ask Q="what is GitOps?"`: in a second terminal
+
+Run the ingest worker against a local Airflow + MLflow:
+
+```bash
 make ingest-worker-up
+```
 
-# Lint everything (Go, Python, Terraform, Helm, YAML)
+Lint everything (Go, Python, Terraform, Helm, YAML):
+
+```bash
 make lint
 ```
 

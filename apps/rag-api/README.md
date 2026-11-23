@@ -42,9 +42,12 @@ go test -race -count=1 ./...
 `RAG_STUB=1` swaps the HTTP embedder and Qdrant for an in-memory bag-of-words embedder and a small built-in set of notes on the course's 8 building blocks (`internal/retrieval/stub.go`). Nothing else is needed:
 
 ```bash
-make start                                  # from the repo root
-make ask Q="what is a GPU node pool?"       # in a second terminal
+make start
+make ask Q="what is a GPU node pool?"
 ```
+
+- `make start`: from the repo root
+- `make ask Q="what is a GPU node pool?"`: in a second terminal
 
 It isn't a real embedding model. It exists so a beginner can see the request → retrieve → answer flow in under a minute.
 

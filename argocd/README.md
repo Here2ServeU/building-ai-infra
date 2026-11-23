@@ -17,18 +17,28 @@ argocd/
 
 ## Bootstrap
 
+1. Install ArgoCD into the target cluster:
+
 ```bash
-# 1. Install ArgoCD into the target cluster
 kubectl apply -k argocd/install/
+```
 
-# 2. Wait for the control plane to come up
+2. Wait for the control plane to come up:
+
+```bash
 kubectl -n argocd rollout status deploy/argocd-server --timeout=5m
+```
 
-# 3. Apply the AppProject and the cluster's root Application (app-of-apps)
+3. Apply the AppProject and the cluster's root Application (app-of-apps):
+
+```bash
 kubectl apply -f argocd/projects/rag-platform.yaml
 kubectl apply -f argocd/clusters/dev-eks/root-app.yaml
+```
 
-# 4. Verify
+4. Verify:
+
+```bash
 argocd app list
 argocd app get rag-platform-dev-eks
 ```

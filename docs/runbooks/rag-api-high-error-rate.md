@@ -11,10 +11,12 @@ Linked alert: `RagApiHighErrorRate` (5xx ratio > 2% for 10 min)
 ## Quick checks (under 2 minutes)
 
 ```bash
-kubectl -n rag get hr rag-api    # last reconciled tag and status
+kubectl -n rag get hr rag-api
 kubectl -n rag rollout status deploy/rag-api
 kubectl -n rag logs deploy/rag-api --tail=100 | jq -r 'select(.level=="ERROR")'
 ```
+
+- `kubectl -n rag get hr rag-api`: last reconciled tag and status
 
 Grafana dashboard: **RAG API — Golden Signals** → "Error ratio" panel, break down by status.
 
@@ -49,8 +51,9 @@ flux reconcile kustomization flux-system
 
 If burn rate is fast and no clear fix in 10 min:
 
+Cap traffic at the ingress to drop excess load.
+
 ```bash
-# Cap traffic at the ingress to drop excess load.
 kubectl -n ingress-nginx annotate ingress rag-api \
   nginx.ingress.kubernetes.io/limit-rps="50" --overwrite
 ```

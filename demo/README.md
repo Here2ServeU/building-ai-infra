@@ -25,9 +25,12 @@ Kubernetes cluster in Docker with storage, MLOps, model serving and full observa
 ```bash
 git clone https://github.com/Here2ServeU/building-ai-infra
 cd building-ai-infra/demo
-make up      # ~10 minutes the first time
-make demo    # opens Grafana, Alertmanager, Prometheus and MLflow
+make up
+make demo
 ```
+
+- `make up`: ~10 minutes the first time
+- `make demo`: opens Grafana, Alertmanager, Prometheus and MLflow
 
 `make up` prints one line per block as it becomes ready:
 
@@ -77,14 +80,18 @@ make demo    # opens Grafana, Alertmanager, Prometheus and MLflow
 To watch alerts arrive at the "pager" (a small webhook viewer standing in for PagerDuty):
 
 ```bash
-kubectl -n observability port-forward svc/alert-viewer 8080:8080   # then open http://localhost:8080
+kubectl -n observability port-forward svc/alert-viewer 8080:8080
 ```
+
+- `kubectl -n observability port-forward svc/alert-viewer 8080:8080`: then open http://localhost:8080
 
 ## Clean up
 
 ```bash
-make down    # deletes the cluster; your laptop is back to normal
+make down
 ```
+
+- `make down`: deletes the cluster; your laptop is back to normal
 
 ## Troubleshooting
 
