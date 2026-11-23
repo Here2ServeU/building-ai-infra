@@ -4,6 +4,7 @@ SHELL := /usr/bin/env bash
 CLUSTER_NAME := obs-demo
 KIND_CONFIG  := kind/cluster.yaml
 CTX          := kind-$(CLUSTER_NAME)
+HOST_PORTS   := 3000 4317 4318 5001 9000 9001 9090 9093
 
 # Pinned so a fresh clone behaves the same next month as it does today.
 CERT_MANAGER_VERSION ?= v1.16.2
@@ -57,6 +58,20 @@ preflight:
 		printf "$(R)✗ missing tools:$$missing$(N)  (run 'make doctor' from the repo root for install hints)\n"; exit 1; \
 	fi
 	@docker info >/dev/null 2>&1 || { printf "$(R)✗ Docker is not running. Start Docker Desktop and retry.$(N)\n"; exit 1; }
+	@if ! kind get clusters 2>/dev/null | grep -qx "$(CLUSTER_NAME)"; then \
+		busy=""; for p in $(HOST_PORTS); do \
+			who=$$(docker ps --format '{{.Names}} {{.Ports}}' | grep -E "[:.]$$p->" | awk '{print "container " $$1}' | head -1 || true); \
+			if [ -z "$$who" ] && command -v lsof >/dev/null; then \
+				who=$$(lsof -nP -iTCP:$$p -sTCP:LISTEN 2>/dev/null | awk 'NR==2{print "process " $$1 " (pid " $$2 ")"}' || true); \
+			fi; \
+			if [ -n "$$who" ]; then busy="$$busy\n  port $$p is used by $$who"; fi; \
+		done; \
+		if [ -n "$$busy" ]; then \
+			printf "$(R)✗ These ports are needed by the demo but already in use:$$busy$(N)\n"; \
+			printf "  Stop them (e.g. 'docker stop <name>' or 'kind delete cluster --name <name>') and run 'make up' again.\n"; \
+			exit 1; \
+		fi; \
+	fi
 	@mem=$$(docker info --format '{{.MemTotal}}' 2>/dev/null || echo 0); \
 	if [ "$$mem" -lt 8000000000 ]; then \
 		printf "$(Y)⚠  Docker has $$((mem/1024/1024/1024)) GB memory. 10 GB+ is recommended (Docker settings → Resources).$(N)\n"; \
@@ -221,10 +236,17 @@ topology: kubeconfig ; @./scenarios/show-topology.sh
 
 # ─── Tabs ──────────────────────────────────────────────────────────────────────
 
+.PHONY: ready-check
+ready-check:
+	@kind get clusters 2>/dev/null | grep -qx "$(CLUSTER_NAME)" || { \
+		printf "$(R)✗ The demo cluster is not running, so there is nothing to open. Run 'make up' first.$(N)\n"; exit 1; }
+	@curl -fs -o /dev/null --max-time 5 http://localhost:3000/api/health || { \
+		printf "$(R)✗ Grafana is not answering on localhost:3000 yet. Check 'make status', or re-run 'make up'.$(N)\n"; exit 1; }
+
 .PHONY: demo tab-grafana tab-grafana-drift tab-alertmanager tab-prometheus tab-mlflow tab-minio
 OPEN := $(shell command -v open || command -v xdg-open || command -v wslview || echo echo)
 
-demo: tab-grafana tab-alertmanager tab-prometheus tab-mlflow
+demo: ready-check tab-grafana tab-alertmanager tab-prometheus tab-mlflow
 	@printf "\n$(G)Opened:$(N)\n"
 	@printf "  Grafana       http://localhost:3000/d/k8s-cluster-overview   admin / admin\n"
 	@printf "  Alertmanager  http://localhost:9093\n"
