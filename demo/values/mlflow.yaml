@@ -63,3 +63,12 @@ serviceMonitor:
   namespace: observability
   labels:
     release: kube-prometheus-stack
+
+# Chart bug workaround: with serviceMonitor on, MLflow writes Prometheus metrics to
+# /mlflow/metrics, but the chart's root filesystem is read-only. Give it a writable dir.
+extraVolumes:
+  - name: prometheus-metrics
+    emptyDir: {}
+extraVolumeMounts:
+  - name: prometheus-metrics
+    mountPath: /mlflow/metrics
