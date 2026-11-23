@@ -1,0 +1,108 @@
+# MLflow tracking server + model registry.
+# A plain manifest (no Helm chart) with a pinned image, so a chart update can't break the demo.
+#   - experiment/run metadata -> Postgres (storage namespace)
+#   - model artifacts         -> MinIO bucket mlflow-artifacts, proxied through the server,
+#                                so clients don't need S3 credentials
+#   - http://localhost:5001   -> NodePort 30500 (mapped in kind/cluster.yaml)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow
+  namespace: mlops
+  labels:
+    app.kubernetes.io/name: mlflow
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mlflow
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mlflow
+    spec:
+      containers:
+        - name: mlflow
+          # Includes the Postgres driver, boto3 (S3/MinIO) and the Prometheus exporter.
+          image: burakince/mlflow:3.16.0
+          command: ["mlflow", "server"]
+          args:
+            - --host=0.0.0.0
+            - --port=5000
+            - --workers=2
+            - --backend-store-uri=postgresql://mlflow:mlflow@postgres.storage.svc:5432/mlflow
+            - --serve-artifacts
+            - --artifacts-destination=s3://mlflow-artifacts/mlflow
+            # MLflow 3 checks the Host header. Kubernetes health checks use the pod IP,
+            # so a laptop demo allows all; in production list your real hostnames.
+            - --allowed-hosts=*
+            - --expose-prometheus=/prometheus
+          envFrom:
+            - secretRef:
+                name: minio-creds
+          env:
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
+            - name: MLFLOW_DISABLE_AGENT_HINT
+              value: "1"
+          ports:
+            - name: http
+              containerPort: 5000
+          volumeMounts:
+            - name: prometheus
+              mountPath: /prometheus
+          # Give a slow laptop up to 5 minutes for the first start (DB schema setup).
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 6
+          resources:
+            requests: { cpu: 100m, memory: 512Mi }
+            limits: { cpu: "1", memory: 1536Mi }
+      volumes:
+        - name: prometheus
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlflow
+  namespace: mlops
+  labels:
+    app.kubernetes.io/name: mlflow
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: mlflow
+  ports:
+    - name: http
+      port: 5000
+      targetPort: http
+      nodePort: 30500
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mlflow
+  namespace: mlops
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mlflow
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

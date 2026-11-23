@@ -104,7 +104,8 @@ make down
 | `kubectl` talks to `localhost:8080` or the wrong cluster | `make kubeconfig` |
 | Linux: OTel agent or other pods show `too many open files` | `sudo sysctl fs.inotify.max_user_watches=524288 fs.inotify.max_user_instances=512` |
 | `inference service` step fails | `kubectl -n mlops describe isvc doc-classifier` and `kubectl -n kserve logs deploy/kserve-controller-manager` |
-| A Helm chart's newest release breaks something | Pin it, e.g. `make up KPS_VERSION=65.1.1` (also `LOKI_VERSION`, `OTEL_VERSION`, `MLFLOW_VERSION`). |
+| You want newer chart versions | Versions are pinned to tested ones. Override, e.g. `make up KPS_VERSION=94.0.0` (also `LOKI_VERSION`, `OTEL_VERSION`). |
+| `mlflow` restarts or `✗ MLflow did not start` | `make up` prints MLflow's last log lines. Most often Postgres isn't ready yet: run `make up` again. |
 | MLflow seeding was skipped | `make seed-mlflow` once MLflow is up. |
 
 ## Laptop vs. the real thing

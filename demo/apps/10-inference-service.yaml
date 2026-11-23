@@ -1,4 +1,4 @@
-# doc-classifier served by KServe (RawDeployment mode).
+# doc-classifier served by KServe (Standard mode: plain Deployment + Service).
 # A tiny Python predictor stands in for a real model so the demo runs on a laptop CPU.
 # It emits the same metrics a real KServe predictor/transformer would
 # (inference_requests_total, inference_request_duration_seconds_bucket,
@@ -60,7 +60,7 @@ metadata:
   labels:
     model.regulated: "true"
   annotations:
-    serving.kserve.io/deploymentMode: RawDeployment
+    serving.kserve.io/deploymentMode: Standard
 spec:
   predictor:
     minReplicas: 1

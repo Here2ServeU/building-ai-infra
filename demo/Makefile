@@ -7,14 +7,14 @@ CTX          := kind-$(CLUSTER_NAME)
 HOST_PORTS   := 3000 4317 4318 5001 9000 9001 9090 9093
 
 # Pinned so a fresh clone behaves the same next month as it does today.
-CERT_MANAGER_VERSION ?= v1.16.2
-KSERVE_VERSION       ?= v0.13.0
+CERT_MANAGER_VERSION ?= v1.21.3
+KSERVE_VERSION       ?= v0.21.0
 
-# Optional Helm chart pins. Empty = latest. Example: make up KPS_VERSION=65.1.1
-KPS_VERSION    ?=
-LOKI_VERSION   ?=
-OTEL_VERSION   ?=
-MLFLOW_VERSION ?=
+# Helm chart versions tested with this demo. Override to try newer ones,
+# e.g. make up KPS_VERSION=94.0.0 (empty = latest).
+KPS_VERSION    ?= 93.9.0
+LOKI_VERSION   ?= 7.7.0
+OTEL_VERSION   ?= 0.182.0
 ver = $(if $(1),--version $(1),)
 
 # A release left "failed" or "pending" by an interrupted run blocks 'helm upgrade';
@@ -122,7 +122,6 @@ bootstrap:
 helm-repos:
 	@helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update >/dev/null
 	@helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts --force-update >/dev/null
-	@helm repo add community-charts https://community-charts.github.io/helm-charts --force-update >/dev/null
 	@helm repo add grafana https://grafana.github.io/helm-charts --force-update >/dev/null
 	@helm repo update >/dev/null
 
@@ -160,29 +159,34 @@ otel:
 .PHONY: mlflow
 mlflow:
 	@printf "$(Y)→ installing MLflow...$(N)\n"
-	$(call helm_reset,mlflow,mlops)
-	@helm upgrade --install mlflow community-charts/mlflow $(call ver,$(MLFLOW_VERSION)) \
-		--namespace mlops --values values/mlflow.yaml --timeout 10m >/dev/null
-	@# Pin the NodePort so http://localhost:5001 always works, whatever the chart defaults to.
-	@kubectl -n mlops patch svc mlflow --type=json \
-		-p '[{"op":"replace","path":"/spec/type","value":"NodePort"},{"op":"add","path":"/spec/ports/0/nodePort","value":30500}]' >/dev/null
-	@kubectl -n mlops rollout status deploy/mlflow --timeout=10m >/dev/null
+	@# Earlier versions installed MLflow from a Helm chart; remove that release once.
+	@if helm status mlflow -n mlops >/dev/null 2>&1; then \
+		printf "  replacing the old MLflow Helm release\n"; helm uninstall mlflow -n mlops --wait >/dev/null 2>&1 || true; \
+	fi
+	@if kubectl -n mlops get deploy mlflow -o jsonpath='{.spec.selector.matchLabels}' 2>/dev/null | grep -q 'app.kubernetes.io/instance'; then \
+		kubectl -n mlops delete deploy/mlflow svc/mlflow --ignore-not-found --wait >/dev/null; \
+	fi
+	@kubectl apply -f mlops/mlflow.yaml >/dev/null
+	@kubectl -n mlops rollout status deploy/mlflow --timeout=10m >/dev/null || { \
+		printf "$(R)✗ MLflow did not start. Last log lines:$(N)\n"; \
+		kubectl -n mlops logs deploy/mlflow --tail=15 2>/dev/null | sed 's/^/    /'; exit 1; }
 	@printf "$(G)✓ mlflow ready$(N)\n"
 
-# KServe needs cert-manager for its webhook certificates. We run it in
-# RawDeployment mode (plain Deployments + Services) so Knative and Istio are not needed.
+# KServe needs cert-manager for its webhook certificates. We run it in Standard mode
+# (plain Deployments + Services; called RawDeployment before v0.15) so Knative and Istio
+# are not needed. v0.13 and older pull an image from gcr.io/kubebuilder, which is shut down.
 .PHONY: kserve
 kserve: cert-manager
-	@printf "$(Y)→ installing KServe (RawDeployment mode)...$(N)\n"
+	@printf "$(Y)→ installing KServe (Standard mode)...$(N)\n"
 	@for i in $$(seq 1 20); do \
 		kubectl apply --server-side --force-conflicts \
 			-f https://github.com/kserve/kserve/releases/download/$(KSERVE_VERSION)/kserve.yaml >/dev/null 2>&1 && break; \
 		[ $$i -eq 20 ] && { printf "$(R)✗ could not apply kserve.yaml$(N)\n"; exit 1; }; sleep 6; \
 	done
 	@kubectl -n kserve get cm inferenceservice-config -o json \
-		| jq '.data.deploy  |= (fromjson | .defaultDeploymentMode = "RawDeployment" | tojson) \
+		| jq '.data.deploy  |= (fromjson | .defaultDeploymentMode = "Standard" | tojson) \
 		    | .data.ingress |= (fromjson | .disableIngressCreation = true | tojson)' \
-		| kubectl apply -f - >/dev/null
+		| kubectl replace -f - >/dev/null
 	@kubectl -n kserve rollout restart deploy/kserve-controller-manager >/dev/null
 	@kubectl -n kserve rollout status deploy/kserve-controller-manager --timeout=5m >/dev/null
 	@printf "$(G)✓ kserve ready$(N)\n"
